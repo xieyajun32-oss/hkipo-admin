@@ -1,0 +1,11 @@
+name = "hkipo-api"
+main = "src/index.js"
+compatibility_date = "2024-01-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "hkipo-db"
+database_id = "PLACEHOLDER_REPLACE_WITH_REAL_ID"
+
+[vars]
+JWT_SECRET = "CHANGE_THIS_TO_A_RANDOM_STRING"
