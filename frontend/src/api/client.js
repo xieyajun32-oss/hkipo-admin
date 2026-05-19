@@ -1,4 +1,4 @@
-const API_BASE = '/api'
+const API_BASE = 'https://hkipo-api.xieyajun32.workers.dev/api'
 
 function getToken() {
   return localStorage.getItem('token')
