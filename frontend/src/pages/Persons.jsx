@@ -35,8 +35,8 @@ export default function Persons() {
   return (
     <div>
       <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold">人员管理</h1>
-        <button onClick={() => setModal({})} className="bg-gray-900 text-white px-4 py-1.5 rounded text-sm">+ 添加</button>
+        <h1 className="text-2xl font-bold">👥 人员管理</h1>
+        <button onClick={() => setModal({})} className="px-4 py-2 rounded-lg text-sm font-medium" style={{background: "var(--accent)", color: "#1a1a1a"}}>+ 添加</button>
       </div>
       <DataTable columns={columns} data={data} searchField="name" onEdit={row => setModal(row)} onDelete={handleDelete} />
       {modal && <FormModal title={modal.id ? '编辑人员' : '添加人员'} fields={formFields} initial={modal} onSubmit={handleSubmit} onClose={() => setModal(null)} />}

@@ -9,8 +9,13 @@ const columns = [
   { key: 'bank_name', label: '银行' },
   { key: 'card_last4', label: '卡号后4位' },
   { key: 'balance', label: '余额', render: v => v ? `${Number(v).toLocaleString()}` : '-' },
-  { key: 'last_transaction_date', label: '最后动账', render: (v) => v || '-' },
-  { key: 'status', label: '状态', render: v => v === 'active' ? '✅正常' : v === 'frozen' ? '❄️冻结' : '⏸️未激活' },
+  { key: 'last_transaction_date', label: '最后动账', render: v => v || '-' },
+  { key: 'status', label: '状态', render: v => {
+    const styles = { active: {color: '#4ade80'}, frozen: {color: '#f87171'}, inactive: {color: '#fbbf24'} }
+    const labels = { active: '✅ 正常', frozen: '❄️ 冻结', inactive: '⏸️ 未激活' }
+    return <span style={styles[v] || {}}>{labels[v] || v}</span>
+  }},
+  { key: 'notes', label: '备注' },
 ]
 
 const formFields = [
@@ -35,9 +40,9 @@ export default function BankCards() {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold">银行卡管理</h1>
-        <button onClick={() => setModal({})} className="bg-gray-900 text-white px-4 py-1.5 rounded text-sm">+ 添加</button>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">💳 银行卡管理</h1>
+        <button onClick={() => setModal({})} className="px-4 py-2 rounded-lg text-sm font-medium" style={{background: 'var(--accent)', color: '#1a1a1a'}}>+ 添加银行卡</button>
       </div>
       <DataTable columns={columns} data={data} searchField="bank_name" onEdit={row => setModal(row)} onDelete={handleDelete} />
       {modal && <FormModal title={modal.id ? '编辑银行卡' : '添加银行卡'} fields={formFields} initial={modal} onSubmit={handleSubmit} onClose={() => setModal(null)} />}
