@@ -46,14 +46,22 @@ function getCurrentBalance(row) {
   return balance0511 + (rechargeMay || 0) - (packageFee || 0)
 }
 
-function getArrearsStatus(row) {
+function getNextMonthBalance(row) {
   const packageFee = parseAmount(sheetValue(row, '当前套餐', 'monthly_cost'))
+  const currentBalance = getCurrentBalance(row)
+
+  if (currentBalance == null) return null
+  return currentBalance - (packageFee || 0)
+}
+
+function getArrearsStatus(row) {
   const balance = getCurrentBalance(row)
+  const nextMonthBalance = getNextMonthBalance(row)
 
   if (balance == null) return { text: '余额未知', color: 'var(--text-muted)' }
   if (balance < 0) return { text: `已欠费 ${formatAmount(Math.abs(balance))}`, color: 'var(--danger)' }
-  if (packageFee != null && balance < packageFee) {
-    return { text: `本月正常，下月欠费 ${formatAmount(packageFee - balance)}`, color: 'var(--warning)' }
+  if (nextMonthBalance != null && nextMonthBalance < 0) {
+    return { text: `本月正常，下月欠费 ${formatAmount(Math.abs(nextMonthBalance))}`, color: 'var(--warning)' }
   }
   return { text: '正常', color: 'var(--success)' }
 }
@@ -76,8 +84,9 @@ const columns = [
   { key: 'balance_0511', label: '5月11余额', render: (_, row) => sheetValue(row, '5月11余额', null, '5.11余额') },
   { key: 'recharge_5m', label: '5月充值', render: (_, row) => sheetValue(row, '5月充值') },
   { key: 'payment_channel', label: '缴费渠道', render: (_, row) => sheetValue(row, '缴费渠道') },
-  { key: 'call_once', label: '通话一次', render: (_, row) => sheetValue(row, '通话一次', null, '通话1次') },
-  { key: 'current_balance', label: '目前话费余额', render: (_, row) => formatAmount(getCurrentBalance(row)) },
+  { key: 'call_once', label: '5月通话一次', render: (_, row) => sheetValue(row, '通话一次', null, '通话1次') },
+  { key: 'current_balance', label: '5月余额', render: (_, row) => formatAmount(getCurrentBalance(row)) },
+  { key: 'next_month_balance', label: '预计下月余额', render: (_, row) => formatAmount(getNextMonthBalance(row)) },
   { key: 'arrears_notice', label: '欠费提醒', render: (_, row) => {
     const status = getArrearsStatus(row)
     return <span style={{color: status.color}}>{status.text}</span>

@@ -15,13 +15,13 @@ export default function DataTable({ columns, data, onEdit, onDelete, searchField
           style={{background: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-primary)'}} />
       )}
       <div className="overflow-x-auto rounded-xl border" style={{borderColor: 'var(--border)'}}>
-        <table className="w-full text-sm">
+        <table className="w-full min-w-max text-sm">
           <thead>
             <tr style={{background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border)'}}>
               {columns.map(col => (
-                <th key={col.key} className="text-left px-4 py-3 font-medium" style={{color: 'var(--text-secondary)'}}>{col.label}</th>
+                <th key={col.key} className="text-left px-4 py-3 font-medium whitespace-nowrap" style={{color: 'var(--text-secondary)'}}>{col.label}</th>
               ))}
-              <th className="px-4 py-3 text-right font-medium" style={{color: 'var(--text-secondary)'}}>操作</th>
+              <th className="px-4 py-3 text-right font-medium whitespace-nowrap" style={{color: 'var(--text-secondary)'}}>操作</th>
             </tr>
           </thead>
           <tbody>
@@ -30,11 +30,11 @@ export default function DataTable({ columns, data, onEdit, onDelete, searchField
                 onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
                 {columns.map(col => (
-                  <td key={col.key} className="px-4 py-3" style={{color: 'var(--text-primary)'}}>
+                  <td key={col.key} className="px-4 py-3 whitespace-nowrap" style={{color: 'var(--text-primary)'}}>
                     {col.render ? col.render(row[col.key], row) : (row[col.key] || '-')}
                   </td>
                 ))}
-                <td className="px-4 py-3 text-right space-x-3">
+                <td className="px-4 py-3 text-right space-x-3 whitespace-nowrap">
                   {onEdit && <button onClick={() => onEdit(row)} className="text-sm hover:underline" style={{color: 'var(--accent)'}}>编辑</button>}
                   {onDelete && <button onClick={() => onDelete(row.id)} className="text-sm hover:underline" style={{color: 'var(--danger)'}}>删除</button>}
                 </td>
