@@ -52,7 +52,9 @@ function getArrearsStatus(row) {
 
   if (balance == null) return { text: '余额未知', color: 'var(--text-muted)' }
   if (balance < 0) return { text: `已欠费 ${formatAmount(Math.abs(balance))}`, color: 'var(--danger)' }
-  if (packageFee != null && balance < packageFee) return { text: `本月可能欠费，余额 ${formatAmount(balance)}`, color: 'var(--warning)' }
+  if (packageFee != null && balance < packageFee) {
+    return { text: `本月正常，下月欠费 ${formatAmount(packageFee - balance)}`, color: 'var(--warning)' }
+  }
   return { text: '正常', color: 'var(--success)' }
 }
 
