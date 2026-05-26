@@ -3,16 +3,37 @@ import { api } from '../api/client'
 import DataTable from '../components/DataTable'
 import FormModal from '../components/FormModal'
 
+function extractSheetData(row) {
+  const notes = row.notes || ''
+  const marker = '表格数据:'
+  if (notes.includes(marker)) {
+    try {
+      return JSON.parse(notes.slice(notes.indexOf(marker) + marker.length).trim())
+    } catch {
+      return {}
+    }
+  }
+  return {}
+}
+
+function sheetValue(row, key, fallbackKey) {
+  const data = extractSheetData(row)
+  return data[key] ?? (fallbackKey ? row[fallbackKey] : '') ?? ''
+}
+
 const columns = [
-  { key: 'id', label: 'ID' },
-  { key: 'person_id', label: '人员ID' },
-  { key: 'phone_number', label: '手机号' },
-  { key: 'carrier', label: '运营商' },
-  { key: 'plan_name', label: '套餐' },
-  { key: 'monthly_cost', label: '月租' },
-  { key: 'plan_expiry_date', label: '到期日' },
-  { key: 'balance', label: '话费余额' },
-  { key: 'status', label: '状态', render: v => v === 'active' ? '✅正常' : v === 'overdue' ? '⚠️欠费' : '❌已注销' },
+  { key: 'code', label: '编号', render: (_, row) => sheetValue(row, '编号') },
+  { key: 'name', label: '姓名', render: (_, row) => sheetValue(row, '姓名') },
+  { key: 'phone_number', label: '电话号码', render: (_, row) => sheetValue(row, '电话号码', 'phone_number') },
+  { key: 'carrier', label: '运营商', render: (_, row) => sheetValue(row, '运营商', 'carrier') },
+  { key: 'plan_name', label: '卡片类别', render: (_, row) => sheetValue(row, '卡片类别', 'plan_name') },
+  { key: 'monthly_cost', label: '当前套餐', render: (_, row) => sheetValue(row, '当前套餐', 'monthly_cost') },
+  { key: 'balance_0320', label: '3.20余额', render: (_, row) => sheetValue(row, '3.20余额') },
+  { key: 'recharge_3m', label: '3月充值', render: (_, row) => sheetValue(row, '3月充值') },
+  { key: 'balance_0511', label: '5.11余额', render: (_, row) => sheetValue(row, '5.11余额') },
+  { key: 'recharge_5m', label: '5月充值', render: (_, row) => sheetValue(row, '5月充值') },
+  { key: 'payment_channel', label: '缴费渠道', render: (_, row) => sheetValue(row, '缴费渠道') },
+  { key: 'call_once', label: '通话1次', render: (_, row) => sheetValue(row, '通话1次') },
 ]
 
 const formFields = [
