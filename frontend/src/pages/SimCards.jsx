@@ -24,6 +24,44 @@ function sheetValue(row, key, fallbackKey, ...aliases) {
   return (fallbackKey ? row[fallbackKey] : '') ?? ''
 }
 
+function parseAmount(value) {
+  if (value == null) return null
+  const text = String(value).replace(/[,，\s元]/g, '')
+  if (!text || text === '/' || text.includes('已退')) return null
+  const match = text.match(/-?\d+(?:\.\d+)?/)
+  return match ? Number(match[0]) : null
+}
+
+function formatAmount(value) {
+  if (value == null || Number.isNaN(value)) return '-'
+  return Number(value.toFixed(2)).toLocaleString()
+}
+
+function getCurrentBalance(row) {
+  const packageFee = parseAmount(sheetValue(row, '当前套餐', 'monthly_cost'))
+  const balance0511 = parseAmount(sheetValue(row, '5月11余额', null, '5.11余额'))
+  const rechargeMay = parseAmount(sheetValue(row, '5月充值'))
+
+  if (balance0511 == null) return null
+  return balance0511 + (rechargeMay || 0) - (packageFee || 0)
+}
+
+function getArrearsStatus(row) {
+  const packageFee = parseAmount(sheetValue(row, '当前套餐', 'monthly_cost'))
+  const balance = getCurrentBalance(row)
+
+  if (balance == null) return { text: '余额未知', color: 'var(--text-muted)' }
+  if (balance < 0) return { text: `已欠费 ${formatAmount(Math.abs(balance))}`, color: 'var(--danger)' }
+  if (packageFee != null && balance < packageFee) return { text: `本月可能欠费，余额 ${formatAmount(balance)}`, color: 'var(--warning)' }
+  return { text: '正常', color: 'var(--success)' }
+}
+
+function getSortNumber(row) {
+  const code = String(sheetValue(row, '编号') || '')
+  const match = code.match(/\d+/)
+  return match ? Number(match[0]) : row.id
+}
+
 const columns = [
   { key: 'code', label: '编号', render: (_, row) => sheetValue(row, '编号') },
   { key: 'name', label: '姓名', render: (_, row) => sheetValue(row, '姓名') },
@@ -37,6 +75,11 @@ const columns = [
   { key: 'recharge_5m', label: '5月充值', render: (_, row) => sheetValue(row, '5月充值') },
   { key: 'payment_channel', label: '缴费渠道', render: (_, row) => sheetValue(row, '缴费渠道') },
   { key: 'call_once', label: '通话一次', render: (_, row) => sheetValue(row, '通话一次', null, '通话1次') },
+  { key: 'current_balance', label: '目前话费余额', render: (_, row) => formatAmount(getCurrentBalance(row)) },
+  { key: 'arrears_notice', label: '欠费提醒', render: (_, row) => {
+    const status = getArrearsStatus(row)
+    return <span style={{color: status.color}}>{status.text}</span>
+  } },
 ]
 
 const formFields = [
@@ -57,7 +100,9 @@ const formFields = [
 export default function SimCards() {
   const [data, setData] = useState([])
   const [modal, setModal] = useState(null)
-  const load = () => api.get('/sim-cards').then(setData)
+  const load = () => api.get('/sim-cards').then(rows => {
+    setData([...rows].sort((a, b) => getSortNumber(a) - getSortNumber(b)))
+  })
   useEffect(() => { load() }, [])
   const handleSubmit = async (form) => { if (modal.id) await api.put(`/sim-cards/${modal.id}`, form); else await api.post('/sim-cards', form); setModal(null); load() }
   const handleDelete = async (id) => { if(confirm('确定删除?')) { await api.del(`/sim-cards/${id}`); load() }}
