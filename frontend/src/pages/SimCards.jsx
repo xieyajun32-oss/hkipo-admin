@@ -16,24 +16,27 @@ function extractSheetData(row) {
   return {}
 }
 
-function sheetValue(row, key, fallbackKey) {
+function sheetValue(row, key, fallbackKey, ...aliases) {
   const data = extractSheetData(row)
-  return data[key] ?? (fallbackKey ? row[fallbackKey] : '') ?? ''
+  for (const dataKey of [key, ...aliases]) {
+    if (data[dataKey] != null) return data[dataKey]
+  }
+  return (fallbackKey ? row[fallbackKey] : '') ?? ''
 }
 
 const columns = [
   { key: 'code', label: '编号', render: (_, row) => sheetValue(row, '编号') },
   { key: 'name', label: '姓名', render: (_, row) => sheetValue(row, '姓名') },
-  { key: 'phone_number', label: '电话号码', render: (_, row) => sheetValue(row, '电话号码', 'phone_number') },
+  { key: 'phone_number', label: '电话号', render: (_, row) => sheetValue(row, '电话号', 'phone_number', '电话号码') },
   { key: 'carrier', label: '运营商', render: (_, row) => sheetValue(row, '运营商', 'carrier') },
   { key: 'plan_name', label: '卡片类别', render: (_, row) => sheetValue(row, '卡片类别', 'plan_name') },
   { key: 'monthly_cost', label: '当前套餐', render: (_, row) => sheetValue(row, '当前套餐', 'monthly_cost') },
-  { key: 'balance_0320', label: '3.20余额', render: (_, row) => sheetValue(row, '3.20余额') },
+  { key: 'balance_0320', label: '3月20余额', render: (_, row) => sheetValue(row, '3月20余额', null, '3.20余额') },
   { key: 'recharge_3m', label: '3月充值', render: (_, row) => sheetValue(row, '3月充值') },
-  { key: 'balance_0511', label: '5.11余额', render: (_, row) => sheetValue(row, '5.11余额') },
+  { key: 'balance_0511', label: '5月11余额', render: (_, row) => sheetValue(row, '5月11余额', null, '5.11余额') },
   { key: 'recharge_5m', label: '5月充值', render: (_, row) => sheetValue(row, '5月充值') },
   { key: 'payment_channel', label: '缴费渠道', render: (_, row) => sheetValue(row, '缴费渠道') },
-  { key: 'call_once', label: '通话1次', render: (_, row) => sheetValue(row, '通话1次') },
+  { key: 'call_once', label: '通话一次', render: (_, row) => sheetValue(row, '通话一次', null, '通话1次') },
 ]
 
 const formFields = [
