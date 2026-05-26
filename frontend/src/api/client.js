@@ -25,8 +25,10 @@ async function request(path, options = {}) {
   const data = await res.json()
   if (res.status === 401) {
     clearToken()
-    window.location.href = '/login'
-    throw new Error('未登录')
+    if (path !== '/auth/login') {
+      window.location.href = '/login'
+    }
+    throw new Error(data.error || '未登录')
   }
   if (!res.ok) throw new Error(data.error || '请求失败')
   return data
