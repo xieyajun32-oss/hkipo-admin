@@ -124,7 +124,7 @@ export default function SimCards() {
         <h1 className="text-2xl font-bold">手机卡管理</h1>
         <button onClick={() => setModal({})} className="px-4 py-2 rounded-lg text-sm font-medium" style={{background: "var(--accent)", color: "#1a1a1a"}}>+ 添加</button>
       </div>
-      <DataTable columns={columns} data={data} searchField="phone_number" onEdit={row => setModal(row)} onDelete={handleDelete} />
+      <DataTable columns={columns} data={data} searchField="phone_number" onEdit={row => setModal(row)} onDelete={handleDelete} wide />
       {modal && <FormModal title={modal.id ? '编辑手机卡' : '添加手机卡'} fields={formFields} initial={modal} onSubmit={handleSubmit} onClose={() => setModal(null)} />}
     </div>
   )

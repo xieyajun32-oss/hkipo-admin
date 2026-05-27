@@ -20,7 +20,7 @@ export default function Layout() {
     <div className="min-h-screen" style={{background: 'var(--bg-primary)'}}>
       {/* Top nav bar */}
       <header className="border-b" style={{borderColor: 'var(--border)', background: 'var(--bg-secondary)'}}>
-        <div className="max-w-7xl mx-auto px-6 h-14 flex items-center justify-between">
+        <div className="w-full max-w-[1600px] mx-auto px-6 h-14 flex items-center justify-between">
           <div className="flex items-center gap-6">
             <span className="text-lg font-bold" style={{color: 'var(--accent)'}}>🏠 港股管理后台</span>
             <nav className="flex gap-1">
@@ -47,7 +47,7 @@ export default function Layout() {
       </header>
 
       {/* Main content */}
-      <main className="max-w-7xl mx-auto px-6 py-8">
+      <main className="w-full max-w-[1600px] mx-auto px-6 py-8">
         <Outlet />
       </main>
     </div>
