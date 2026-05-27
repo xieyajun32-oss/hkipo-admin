@@ -37,6 +37,20 @@ function formatAmount(value) {
   return Number(value.toFixed(2)).toLocaleString()
 }
 
+function formatTotalAmount(value) {
+  if (value == null || Number.isNaN(value)) return '-'
+  return `${formatAmount(value)} 元`
+}
+
+function sumSheetAmounts(rows, key, fallbackKey, ...aliases) {
+  const amounts = rows
+    .map(row => parseAmount(sheetValue(row, key, fallbackKey, ...aliases)))
+    .filter(value => value != null)
+
+  if (amounts.length === 0) return null
+  return amounts.reduce((sum, value) => sum + value, 0)
+}
+
 function getCurrentBalance(row) {
   const packageFee = parseAmount(sheetValue(row, '当前套餐', 'monthly_cost'))
   const balance0511 = parseAmount(sheetValue(row, '5月11余额', null, '5.11余额'))
@@ -93,6 +107,15 @@ const columns = [
   } },
 ]
 
+function getSummaryRow(rows) {
+  return {
+    code: '合计',
+    monthly_cost: formatTotalAmount(sumSheetAmounts(rows, '当前套餐', 'monthly_cost')),
+    recharge_3m: formatTotalAmount(sumSheetAmounts(rows, '3月充值')),
+    recharge_5m: formatTotalAmount(sumSheetAmounts(rows, '5月充值')),
+  }
+}
+
 const formFields = [
   { key: 'person_id', label: '人员ID', type: 'number', required: true },
   { key: 'phone_number', label: '手机号', required: true },
@@ -124,7 +147,7 @@ export default function SimCards() {
         <h1 className="text-2xl font-bold">手机卡管理</h1>
         <button onClick={() => setModal({})} className="px-4 py-2 rounded-lg text-sm font-medium" style={{background: "var(--accent)", color: "#1a1a1a"}}>+ 添加</button>
       </div>
-      <DataTable columns={columns} data={data} searchField="phone_number" onEdit={row => setModal(row)} onDelete={handleDelete} wide />
+      <DataTable columns={columns} data={data} searchField="phone_number" onEdit={row => setModal(row)} onDelete={handleDelete} wide summaryRow={getSummaryRow} />
       {modal && <FormModal title={modal.id ? '编辑手机卡' : '添加手机卡'} fields={formFields} initial={modal} onSubmit={handleSubmit} onClose={() => setModal(null)} />}
     </div>
   )

@@ -1,11 +1,12 @@
 import React, { useState } from 'react'
 
-export default function DataTable({ columns, data, onEdit, onDelete, searchField, wide = false }) {
+export default function DataTable({ columns, data, onEdit, onDelete, searchField, wide = false, summaryRow }) {
   const [search, setSearch] = useState('')
   
   const filtered = search && searchField
     ? data.filter(row => String(row[searchField] || '').toLowerCase().includes(search.toLowerCase()))
     : data
+  const resolvedSummaryRow = typeof summaryRow === 'function' ? summaryRow(filtered) : summaryRow
 
   return (
     <div>
@@ -41,6 +42,18 @@ export default function DataTable({ columns, data, onEdit, onDelete, searchField
               </tr>
             ))}
           </tbody>
+          {resolvedSummaryRow && filtered.length > 0 && (
+            <tfoot>
+              <tr style={{background: 'var(--bg-secondary)', borderTop: '1px solid var(--border)'}}>
+                {columns.map(col => (
+                  <td key={col.key} className={`${wide ? 'px-3' : 'px-4'} py-3 whitespace-nowrap font-semibold`} style={{color: 'var(--text-primary)'}}>
+                    {resolvedSummaryRow[col.key] ?? '-'}
+                  </td>
+                ))}
+                <td className={`${wide ? 'px-3' : 'px-4'} py-3 whitespace-nowrap`} />
+              </tr>
+            </tfoot>
+          )}
         </table>
         {filtered.length === 0 && <div className="text-center py-10" style={{color: 'var(--text-muted)'}}>暂无数据</div>}
       </div>
