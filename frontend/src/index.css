@@ -22,9 +22,53 @@ body {
   background: var(--bg-primary);
   color: var(--text-primary);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans SC", "PingFang SC", sans-serif;
+  font-size: 13px;
 }
 
 /* Scrollbar */
-::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar { width: 6px; height: 8px; }
 ::-webkit-scrollbar-track { background: var(--bg-primary); }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+.admin-compact {
+  font-size: 13px;
+}
+
+.admin-compact h1 {
+  font-size: 18px;
+  line-height: 1.35;
+}
+
+.admin-compact h2 {
+  font-size: 15px;
+  line-height: 1.35;
+}
+
+.admin-compact table {
+  font-size: 12px;
+}
+
+.admin-compact th,
+.admin-compact td {
+  line-height: 1.25;
+}
+
+.admin-compact input,
+.admin-compact select,
+.admin-compact button {
+  font-size: 12px;
+}
+
+.top-scrollbar {
+  overflow-x: auto;
+  overflow-y: hidden;
+  height: 12px;
+  margin-bottom: 4px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-primary);
+}
+
+.top-scrollbar-inner {
+  height: 1px;
+}

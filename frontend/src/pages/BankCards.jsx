@@ -1,13 +1,13 @@
-import React, { useState, useEffect } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { api } from '../api/client'
 
 const BANK_INFO_MARKER = '银行信息数据:'
 
 const baseColumns = [
-  { key: 'code', label: '编号', path: ['编号'], width: 64 },
-  { key: 'phone_code', label: '手机编号', path: ['手机编号'], width: 96 },
-  { key: 'name', label: '姓名', path: ['姓名'], width: 112 },
-  { key: 'phillip_bound_bank', label: '辉立绑定银行', path: ['辉立绑定银行'], width: 128 },
+  { key: 'code', label: '编号', path: ['编号'], width: 52 },
+  { key: 'phone_code', label: '手机编号', path: ['手机编号'], width: 78 },
+  { key: 'name', label: '姓名', path: ['姓名'], width: 86 },
+  { key: 'phillip_bound_bank', label: '辉立绑定银行', path: ['辉立绑定银行'], width: 108 },
 ]
 
 const bankGroups = [
@@ -16,7 +16,7 @@ const bankGroups = [
     columns: [
       { key: 'status', label: '注册情况', path: ['注册情况'] },
       { key: 'login', label: '是否能登陆', path: ['是否能登陆'] },
-      { key: 'username', label: '用户名', path: ['用户名'], width: 132 },
+      { key: 'username', label: '用户名', path: ['用户名'], width: 112 },
       { key: 'transaction_age', label: '动账时间', hint: '已过几个月', render: (_, row) => transactionAge(row, '汇丰') },
     ],
   },
@@ -25,7 +25,7 @@ const bankGroups = [
     columns: [
       { key: 'status', label: '注册情况', path: ['注册情况'] },
       { key: 'login', label: '是否能登陆', path: ['是否能登陆'] },
-      { key: 'username', label: '用户名', path: ['用户名'], width: 132 },
+      { key: 'username', label: '用户名', path: ['用户名'], width: 112 },
       { key: 'transaction_age', label: '动账时间', hint: '已过几个月', render: (_, row) => transactionAge(row, '中银') },
     ],
   },
@@ -34,9 +34,9 @@ const bankGroups = [
     columns: [
       { key: 'status', label: '注册情况', path: ['注册情况'] },
       { key: 'login', label: '是否能登陆', path: ['是否能登陆'] },
-      { key: 'account', label: '众安账号387', path: ['众安账号387'], width: 132 },
-      { key: 'username', label: '用户名', path: ['用户名'], width: 132 },
-      { key: 'transfer', label: '5.14转入', path: ['5.14转入'], width: 88 },
+      { key: 'account', label: '众安账号387', path: ['众安账号387'], width: 112 },
+      { key: 'username', label: '用户名', path: ['用户名'], width: 112 },
+      { key: 'transfer', label: '5.14转入', path: ['5.14转入'], width: 76 },
       { key: 'transaction_age', label: '动账时间', hint: '已过几个月', render: (_, row) => transactionAge(row, '众安') },
     ],
   },
@@ -45,8 +45,8 @@ const bankGroups = [
     columns: [
       { key: 'status', label: '天星', path: ['天星'] },
       { key: 'login', label: '天星登陆', path: ['天星登陆'] },
-      { key: 'username', label: '用户名', path: ['用户名'], width: 132 },
-      { key: 'transfer', label: '5.14转入', path: ['5.14转入'], width: 88 },
+      { key: 'username', label: '用户名', path: ['用户名'], width: 112 },
+      { key: 'transfer', label: '5.14转入', path: ['5.14转入'], width: 76 },
       { key: 'transaction_age', label: '动账时间', hint: '已过几个月', render: (_, row) => transactionAge(row, '天星395') },
     ],
   },
@@ -55,8 +55,8 @@ const bankGroups = [
     columns: [
       { key: 'status', label: '注册情况', path: ['注册情况'] },
       { key: 'login', label: '是否能登陆', path: ['是否能登陆'] },
-      { key: 'username', label: '用户名', path: ['用户名'], width: 132 },
-      { key: 'transfer', label: '5.14转入', path: ['5.14转入'], width: 88 },
+      { key: 'username', label: '用户名', path: ['用户名'], width: 112 },
+      { key: 'transfer', label: '5.14转入', path: ['5.14转入'], width: 76 },
       { key: 'transaction_age', label: '动账时间', hint: '已过几个月', render: (_, row) => transactionAge(row, '中信') },
     ],
   },
@@ -65,8 +65,8 @@ const bankGroups = [
     columns: [
       { key: 'status', label: '注册情况', path: ['注册情况'] },
       { key: 'login', label: '是否能登陆', path: ['是否能登陆'] },
-      { key: 'username', label: '用户名', path: ['用户名'], width: 132 },
-      { key: 'transfer', label: '5.14转入', path: ['5.14转入'], width: 88 },
+      { key: 'username', label: '用户名', path: ['用户名'], width: 112 },
+      { key: 'transfer', label: '5.14转入', path: ['5.14转入'], width: 76 },
       { key: 'transaction_age', label: '动账时间', hint: '已过几个月', render: (_, row) => transactionAge(row, '汇立390') },
     ],
   },
@@ -75,7 +75,7 @@ const bankGroups = [
     columns: [
       { key: 'status', label: '注册情况', path: ['注册情况'] },
       { key: 'login', label: '是否能登陆', path: ['是否能登陆'] },
-      { key: 'username', label: '用户名', path: ['用户名'], width: 132 },
+      { key: 'username', label: '用户名', path: ['用户名'], width: 112 },
       { key: 'transaction_age', label: '动账时间', hint: '已过几个月', render: (_, row) => transactionAge(row, '蚂蚁') },
     ],
   },
@@ -151,14 +151,39 @@ function cellText(value) {
 }
 
 function columnWidth(column) {
-  return column.width ? { minWidth: column.width, width: column.width } : { minWidth: 96 }
+  return column.width ? { minWidth: column.width, width: column.width } : { minWidth: 78 }
 }
 
 function BankInfoTable({ data }) {
   const [search, setSearch] = useState('')
+  const topScrollRef = useRef(null)
+  const tableScrollRef = useRef(null)
   const filtered = search
     ? data.filter(row => String(row.search_text || '').toLowerCase().includes(search.toLowerCase()))
     : data
+
+  useEffect(() => {
+    const top = topScrollRef.current
+    const table = tableScrollRef.current
+    if (!top || !table) return
+
+    let syncing = false
+    const sync = (source, target) => {
+      if (syncing) return
+      syncing = true
+      target.scrollLeft = source.scrollLeft
+      requestAnimationFrame(() => { syncing = false })
+    }
+    const onTopScroll = () => sync(top, table)
+    const onTableScroll = () => sync(table, top)
+
+    top.addEventListener('scroll', onTopScroll)
+    table.addEventListener('scroll', onTableScroll)
+    return () => {
+      top.removeEventListener('scroll', onTopScroll)
+      table.removeEventListener('scroll', onTableScroll)
+    }
+  }, [])
 
   return (
     <div>
@@ -167,19 +192,22 @@ function BankInfoTable({ data }) {
         placeholder="搜索手机编号、姓名、银行信息..."
         value={search}
         onChange={e => setSearch(e.target.value)}
-        className="rounded-lg px-4 py-2 text-sm mb-4 w-full max-w-md outline-none"
+        className="rounded-md px-3 py-1.5 text-xs mb-2 w-full max-w-sm outline-none"
         style={{ background: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
       />
 
-      <div className="overflow-x-auto rounded-lg border" style={{ borderColor: 'var(--border)' }}>
-        <table className="w-full min-w-[4200px] border-collapse text-sm">
+      <div ref={topScrollRef} className="top-scrollbar">
+        <div className="top-scrollbar-inner" style={{ width: 3600 }} />
+      </div>
+      <div ref={tableScrollRef} className="overflow-x-auto rounded-lg border" style={{ borderColor: 'var(--border)' }}>
+        <table className="w-full min-w-[3600px] border-collapse text-xs">
           <thead>
             <tr style={{ background: 'var(--bg-secondary)' }}>
               {baseColumns.map(column => (
                 <th
                   key={column.key}
                   rowSpan={2}
-                  className="border px-3 py-3 text-center font-semibold whitespace-nowrap"
+                  className="border px-2 py-2 text-center font-semibold whitespace-nowrap"
                   style={{ ...columnWidth(column), borderColor: 'var(--border)', color: 'var(--text-primary)' }}
                 >
                   {column.label}
@@ -189,7 +217,7 @@ function BankInfoTable({ data }) {
                 <th
                   key={group.name}
                   colSpan={group.columns.length}
-                  className="border px-3 py-2 text-center font-semibold whitespace-nowrap"
+                  className="border px-2 py-1.5 text-center font-semibold whitespace-nowrap"
                   style={{ borderColor: 'var(--border)', color: 'var(--text-primary)' }}
                 >
                   {group.name}
@@ -201,11 +229,11 @@ function BankInfoTable({ data }) {
                 group.columns.map(column => (
                   <th
                     key={`${group.name}-${column.key}`}
-                    className="border px-3 py-2 text-center font-medium whitespace-nowrap"
+                    className="border px-2 py-1.5 text-center font-medium whitespace-nowrap"
                     style={{ ...columnWidth(column), borderColor: 'var(--border)', color: 'var(--text-secondary)' }}
                   >
                     <span className="block">{column.label}</span>
-                    {column.hint && <span className="mt-1 block text-xs" style={{ color: 'var(--text-muted)' }}>{column.hint}</span>}
+                    {column.hint && <span className="mt-0.5 block text-[11px]" style={{ color: 'var(--text-muted)' }}>{column.hint}</span>}
                   </th>
                 ))
               )}
@@ -222,7 +250,7 @@ function BankInfoTable({ data }) {
                 {baseColumns.map(column => (
                   <td
                     key={column.key}
-                    className="border px-3 py-2 text-center whitespace-nowrap"
+                    className="border px-2 py-1.5 text-center whitespace-nowrap"
                     style={{ ...columnWidth(column), borderColor: 'var(--border)', color: 'var(--text-primary)' }}
                   >
                     {cellText(bankInfoValue(row, ...(column.path || [])))}
@@ -232,7 +260,7 @@ function BankInfoTable({ data }) {
                   group.columns.map(column => (
                     <td
                       key={`${group.name}-${column.key}`}
-                      className="border px-3 py-2 text-center whitespace-nowrap"
+                      className="border px-2 py-1.5 text-center whitespace-nowrap"
                       style={{ ...columnWidth(column), borderColor: 'var(--border)', color: 'var(--text-primary)' }}
                     >
                       {cellText(bankValue(row, group.name, column))}
@@ -243,7 +271,7 @@ function BankInfoTable({ data }) {
             ))}
           </tbody>
         </table>
-        {filtered.length === 0 && <div className="text-center py-10" style={{ color: 'var(--text-muted)' }}>暂无数据</div>}
+        {filtered.length === 0 && <div className="text-center py-8" style={{ color: 'var(--text-muted)' }}>暂无数据</div>}
       </div>
     </div>
   )
@@ -263,7 +291,7 @@ export default function BankCards() {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex justify-between items-center mb-3">
         <h1 className="text-2xl font-bold">银行信息</h1>
       </div>
       <BankInfoTable data={data} />

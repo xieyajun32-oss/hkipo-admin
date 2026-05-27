@@ -17,16 +17,16 @@ export default function Layout() {
   const logout = () => { clearToken(); navigate('/login') }
 
   return (
-    <div className="min-h-screen" style={{background: 'var(--bg-primary)'}}>
+    <div className="admin-compact min-h-screen" style={{background: 'var(--bg-primary)'}}>
       {/* Top nav bar */}
       <header className="border-b" style={{borderColor: 'var(--border)', background: 'var(--bg-secondary)'}}>
-        <div className="w-full max-w-[1600px] mx-auto px-6 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-6">
-            <span className="text-lg font-bold" style={{color: 'var(--accent)'}}>🏠 港股管理后台</span>
+        <div className="w-full mx-auto px-3 h-11 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-bold whitespace-nowrap" style={{color: 'var(--accent)'}}>🏠 港股管理后台</span>
             <nav className="flex gap-1">
               {nav.map(item => (
                 <Link key={item.path} to={item.path}
-                  className={`px-3 py-1.5 rounded text-sm transition-colors ${
+                  className={`px-2 py-1 rounded text-xs transition-colors ${
                     location.pathname === item.path 
                       ? 'text-white' 
                       : ''
@@ -40,14 +40,14 @@ export default function Layout() {
               ))}
             </nav>
           </div>
-          <button onClick={logout} className="text-sm px-3 py-1 rounded hover:opacity-80" style={{color: 'var(--text-muted)'}}>
+          <button onClick={logout} className="text-xs px-2 py-1 rounded hover:opacity-80" style={{color: 'var(--text-muted)'}}>
             退出
           </button>
         </div>
       </header>
 
       {/* Main content */}
-      <main className="w-full max-w-[1600px] mx-auto px-6 py-8">
+      <main className="w-full mx-auto px-3 py-4">
         <Outlet />
       </main>
     </div>
