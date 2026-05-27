@@ -1,13 +1,31 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../api/client'
-import DataTable from '../components/DataTable'
 import FormModal from '../components/FormModal'
+
+function parseIpoNotes(notes) {
+  if (!notes) return null
+  try {
+    const parsed = JSON.parse(notes)
+    return Array.isArray(parsed?.applications) ? parsed : null
+  } catch {
+    return null
+  }
+}
+
+function fmt(value) {
+  if (value === null || value === undefined || value === '') return '-'
+  return typeof value === 'number' ? value.toLocaleString() : value
+}
 
 const columns = [
   { key: 'stock_name', label: '股票名称' },
   { key: 'stock_code', label: '代码' },
   { key: 'offer_price', label: '发行价' },
+  { key: 'applications_count', label: '申购账号', render: (_, row) => parseIpoNotes(row.notes)?.applications?.length || '-' },
+  { key: 'total_lots', label: '认购手数', render: (_, row) => fmt(parseIpoNotes(row.notes)?.summary?.total_lots) },
+  { key: 'total_fee', label: '手续费合计', render: (_, row) => fmt(parseIpoNotes(row.notes)?.summary?.total_fee) },
+  { key: 'ipo_profit', label: '打新利润', render: (_, row) => fmt(parseIpoNotes(row.notes)?.summary?.ipo_profit) },
   { key: 'subscription_start', label: '招股开始' },
   { key: 'listing_date', label: '上市日' },
 ]
@@ -40,13 +58,13 @@ export default function Ipos() {
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead><tr className="border-b bg-gray-50">
-            {columns.map(c => <th key={c.key} className="text-left px-3 py-2 font-medium text-gray-600">{c.label}</th>)}
+            {columns.map(c => <th key={c.key} className="text-left px-3 py-2 font-medium text-gray-600 whitespace-nowrap">{c.label}</th>)}
             <th className="px-3 py-2 text-right">操作</th>
           </tr></thead>
           <tbody>
             {data.map(row => (
               <tr key={row.id} className="border-b hover:bg-gray-50 cursor-pointer" onClick={() => navigate(`/admin/ipos/${row.id}`)}>
-                {columns.map(c => <td key={c.key} className="px-3 py-2">{row[c.key] || '-'}</td>)}
+                {columns.map(c => <td key={c.key} className="px-3 py-2 whitespace-nowrap">{c.render ? c.render(row[c.key], row) : (row[c.key] || '-')}</td>)}
                 <td className="px-3 py-2 text-right space-x-2" onClick={e => e.stopPropagation()}>
                   <button onClick={() => setModal(row)} className="text-blue-600 hover:underline">编辑</button>
                   <button onClick={() => handleDelete(row.id)} className="text-red-500 hover:underline">删除</button>

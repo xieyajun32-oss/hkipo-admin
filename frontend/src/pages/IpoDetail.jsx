@@ -2,6 +2,47 @@ import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { api } from '../api/client'
 
+const importedColumns = [
+  ['index', '序号'],
+  ['phone_code', '手机编号'],
+  ['name', '姓名'],
+  ['capital', '打新资金'],
+  ['broker', '券商'],
+  ['lots_applied', '认购手数'],
+  ['shares_applied', '认购股数'],
+  ['shares_won', '中签股数'],
+  ['won_amount', '中签金额'],
+  ['subscription_fee', '手续费'],
+  ['winning_fee', '中签费'],
+  ['stamp_formula', '印花税/公式'],
+  ['stamp_duty', '印花税'],
+  ['sell_commission', '卖出佣金'],
+  ['settlement_fee', '结算费'],
+  ['transaction_tax', '交易税'],
+  ['total_fee', '手续费合计'],
+  ['cost_price', '成本价'],
+  ['sell_price', '卖出价'],
+  ['sold', '是否卖出'],
+  ['sell_amount', '卖出金额'],
+  ['trading_profit', '股票交易利润'],
+  ['ipo_profit', '打新利润'],
+]
+
+function parseIpoNotes(notes) {
+  if (!notes) return null
+  try {
+    const parsed = JSON.parse(notes)
+    return Array.isArray(parsed?.applications) ? parsed : null
+  } catch {
+    return null
+  }
+}
+
+function fmt(value) {
+  if (value === null || value === undefined || value === '') return '-'
+  return typeof value === 'number' ? value.toLocaleString() : value
+}
+
 export default function IpoDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -61,7 +102,10 @@ export default function IpoDetail() {
 
   if (!ipo) return <div className="text-gray-400">加载中...</div>
 
-  const totalProfit = subs.filter(s => s.profit).reduce((sum, s) => sum + s.profit, 0)
+  const imported = parseIpoNotes(ipo.notes)
+  const importedRows = imported?.applications || []
+  const summary = imported?.summary || {}
+  const totalProfit = imported ? (summary.ipo_profit || 0) : subs.filter(s => s.profit).reduce((sum, s) => sum + s.profit, 0)
 
   return (
     <div>
@@ -70,23 +114,64 @@ export default function IpoDetail() {
         <div>
           <h1 className="text-2xl font-bold">{ipo.stock_name} ({ipo.stock_code})</h1>
           <p className="text-sm text-gray-500 mt-1">发行价: {ipo.offer_price} | 上市日: {ipo.listing_date || '待定'}</p>
+          {imported?.fee_rule && (
+            <p className="text-xs text-gray-500 mt-1">
+              卖出费用规则：卖出佣金 {imported.fee_rule.sell_commission} 元，结算费 {imported.fee_rule.settlement_fee} 元，交易税 {imported.fee_rule.transaction_tax} 元
+            </p>
+          )}
         </div>
-        <button onClick={() => setShowSubscribe(true)} className="bg-gray-900 text-white px-4 py-1.5 rounded text-sm">+ 批量申购</button>
+        {!imported && <button onClick={() => setShowSubscribe(true)} className="bg-gray-900 text-white px-4 py-1.5 rounded text-sm">+ 批量申购</button>}
       </div>
 
       {/* Summary */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-4 gap-3 mb-5">
         <div className="bg-white border rounded p-3 text-center">
-          <div className="text-lg font-bold">{subs.length}</div><div className="text-xs text-gray-500">参与账号</div>
+          <div className="text-lg font-bold">{imported ? importedRows.length : subs.length}</div><div className="text-xs text-gray-500">参与账号</div>
         </div>
         <div className="bg-white border rounded p-3 text-center">
-          <div className="text-lg font-bold">{subs.filter(s => s.is_won).length}</div><div className="text-xs text-gray-500">中签数</div>
+          <div className="text-lg font-bold">{imported ? fmt(summary.total_lots) : subs.filter(s => s.is_won).length}</div><div className="text-xs text-gray-500">{imported ? '认购手数' : '中签数'}</div>
         </div>
         <div className="bg-white border rounded p-3 text-center">
-          <div className="text-lg font-bold text-green-600">{totalProfit.toLocaleString()}</div><div className="text-xs text-gray-500">总盈亏</div>
+          <div className="text-lg font-bold">{imported ? fmt(summary.total_fee) : '-'}</div><div className="text-xs text-gray-500">手续费合计</div>
+        </div>
+        <div className="bg-white border rounded p-3 text-center">
+          <div className={`text-lg font-bold ${totalProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>{totalProfit.toLocaleString()}</div><div className="text-xs text-gray-500">总盈亏</div>
         </div>
       </div>
 
+      {imported && (
+        <div className="mb-5">
+          <div className="top-scrollbar" onScroll={e => {
+            const table = document.getElementById('imported-ipo-table-scroll')
+            if (table) table.scrollLeft = e.currentTarget.scrollLeft
+          }}>
+            <div className="top-scrollbar-inner" style={{ width: 2600 }} />
+          </div>
+          <div id="imported-ipo-table-scroll" className="overflow-x-auto rounded-lg border" style={{ borderColor: 'var(--border)' }}>
+            <table className="w-full min-w-[2600px] text-xs">
+              <thead>
+                <tr className="border-b bg-gray-50">
+                  {importedColumns.map(([key, label]) => (
+                    <th key={key} className="text-left px-2 py-2 font-medium whitespace-nowrap text-gray-600">{label}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {importedRows.map(row => (
+                  <tr key={`${row.index}-${row.phone_code}`} className="border-b hover:bg-gray-50">
+                    {importedColumns.map(([key]) => (
+                      <td key={key} className="px-2 py-1.5 whitespace-nowrap">{fmt(row[key])}</td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {!imported && (
+      <>
       {/* Batch actions */}
       <div className="flex gap-2 mb-4 flex-wrap">
         <button onClick={() => handleBatchResult(true)} className="text-xs border px-3 py-1 rounded hover:bg-green-50 text-green-700">✅ 批量标记中签</button>
@@ -131,6 +216,8 @@ export default function IpoDetail() {
           ))}
         </tbody>
       </table>
+      </>
+      )}
 
       {/* Batch subscribe modal */}
       {showSubscribe && (
