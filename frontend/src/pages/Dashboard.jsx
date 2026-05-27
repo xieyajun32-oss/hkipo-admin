@@ -26,7 +26,7 @@ export default function Dashboard() {
     { label: '💳 银行卡管理', path: '/admin/bank-cards', color: '#4ade80' },
     { label: '📱 手机卡管理', path: '/admin/sim-cards', color: '#60a5fa' },
     { label: '🎯 IPO打新', path: '/admin/ipos', color: '#f472b6' },
-    { label: '👥 人员管理', path: '/admin/persons', color: '#a78bfa' },
+    { label: '📋 信息总表', path: '/admin/persons', color: '#a78bfa' },
   ]
 
   return (

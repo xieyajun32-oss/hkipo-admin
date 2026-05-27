@@ -4,7 +4,7 @@ import { clearToken } from '../api/client'
 
 const nav = [
   { path: '/admin', label: '仪表盘', icon: '📊' },
-  { path: '/admin/persons', label: '人员管理', icon: '👥' },
+  { path: '/admin/persons', label: '信息总表', icon: '📋' },
   { path: '/admin/bank-cards', label: '银行卡', icon: '💳' },
   { path: '/admin/sim-cards', label: '手机卡', icon: '📱' },
   { path: '/admin/brokers', label: '券商账号', icon: '📈' },
