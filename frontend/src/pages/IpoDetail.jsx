@@ -28,6 +28,13 @@ const importedColumns = [
   ['ipo_profit', '打新利润'],
 ]
 
+const summaryCards = [
+  ['accounts', '参与账号'],
+  ['total_lots', '认购手数'],
+  ['total_fee', '手续费合计'],
+  ['ipo_profit', '总盈亏'],
+]
+
 function parseIpoNotes(notes) {
   if (!notes) return null
   try {
@@ -41,6 +48,14 @@ function parseIpoNotes(notes) {
 function fmt(value) {
   if (value === null || value === undefined || value === '') return '-'
   return typeof value === 'number' ? value.toLocaleString() : value
+}
+
+function getSummaryValue(key, imported, importedRows, summary, subs, totalProfit) {
+  if (key === 'accounts') return imported ? importedRows.length : subs.length
+  if (key === 'total_lots') return imported ? fmt(summary.total_lots) : subs.filter(s => s.is_won).length
+  if (key === 'total_fee') return imported ? fmt(summary.total_fee) : '-'
+  if (key === 'ipo_profit') return totalProfit.toLocaleString()
+  return '-'
 }
 
 export default function IpoDetail() {
@@ -125,18 +140,12 @@ export default function IpoDetail() {
 
       {/* Summary */}
       <div className="grid grid-cols-4 gap-3 mb-5">
-        <div className="bg-white border rounded p-3 text-center">
-          <div className="text-lg font-bold">{imported ? importedRows.length : subs.length}</div><div className="text-xs text-gray-500">参与账号</div>
-        </div>
-        <div className="bg-white border rounded p-3 text-center">
-          <div className="text-lg font-bold">{imported ? fmt(summary.total_lots) : subs.filter(s => s.is_won).length}</div><div className="text-xs text-gray-500">{imported ? '认购手数' : '中签数'}</div>
-        </div>
-        <div className="bg-white border rounded p-3 text-center">
-          <div className="text-lg font-bold">{imported ? fmt(summary.total_fee) : '-'}</div><div className="text-xs text-gray-500">手续费合计</div>
-        </div>
-        <div className="bg-white border rounded p-3 text-center">
-          <div className={`text-lg font-bold ${totalProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>{totalProfit.toLocaleString()}</div><div className="text-xs text-gray-500">总盈亏</div>
-        </div>
+        {summaryCards.map(([key, label]) => (
+          <div key={key} className="rounded-md border p-3 text-center ipo-summary-card">
+            <div className="ipo-summary-value">{getSummaryValue(key, imported, importedRows, summary, subs, totalProfit)}</div>
+            <div className="ipo-summary-label">{key === 'total_lots' && !imported ? '中签数' : label}</div>
+          </div>
+        ))}
       </div>
 
       {imported && (
@@ -148,17 +157,17 @@ export default function IpoDetail() {
             <div className="top-scrollbar-inner" style={{ width: 2600 }} />
           </div>
           <div id="imported-ipo-table-scroll" className="overflow-x-auto rounded-lg border" style={{ borderColor: 'var(--border)' }}>
-            <table className="w-full min-w-[2600px] text-xs">
+            <table className="w-full min-w-[2600px] text-xs ipo-import-table">
               <thead>
-                <tr className="border-b bg-gray-50">
+                <tr>
                   {importedColumns.map(([key, label]) => (
-                    <th key={key} className="text-left px-2 py-2 font-medium whitespace-nowrap text-gray-600">{label}</th>
+                    <th key={key} className="text-left px-2 py-2 font-medium whitespace-nowrap">{label}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {importedRows.map(row => (
-                  <tr key={`${row.index}-${row.phone_code}`} className="border-b hover:bg-gray-50">
+                  <tr key={`${row.index}-${row.phone_code}`}>
                     {importedColumns.map(([key]) => (
                       <td key={key} className="px-2 py-1.5 whitespace-nowrap">{fmt(row[key])}</td>
                     ))}

@@ -13,6 +13,7 @@
   --accent: #d4a853;
   --accent-hover: #e5bc6a;
   --border: #333333;
+  --border-soft: #2a2a2a;
   --success: #4ade80;
   --warning: #fbbf24;
   --danger: #f87171;
@@ -71,4 +72,44 @@ body {
 
 .top-scrollbar-inner {
   height: 1px;
+}
+
+.ipo-summary-card {
+  background: var(--bg-card);
+  border-color: var(--border-soft);
+}
+
+.ipo-summary-value {
+  color: var(--text-primary);
+  font-size: 17px;
+  line-height: 1.25;
+  font-weight: 700;
+}
+
+.ipo-summary-label {
+  color: var(--text-secondary);
+  font-size: 11px;
+  margin-top: 2px;
+}
+
+.ipo-import-table {
+  color: var(--text-primary);
+  font-size: 12px;
+}
+
+.ipo-import-table thead tr {
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.ipo-import-table th {
+  color: var(--text-secondary);
+}
+
+.ipo-import-table tbody tr {
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.ipo-import-table tbody tr:hover {
+  background: var(--bg-hover);
 }
