@@ -19,7 +19,28 @@ function fmt(value) {
 }
 
 function darkMarketDate(row) {
-  return parseIpoNotes(row.notes)?.dark_market_date || '-'
+  return row.listing_date || parseIpoNotes(row.notes)?.dark_market_date || '-'
+}
+
+function normalizeDate(value) {
+  if (!value) return value
+  const normalized = String(value).trim().replaceAll('/', '-')
+  const match = normalized.match(/^(\d{1,4})-(\d{1,2})-(\d{1,2})$/)
+  if (!match) return value
+
+  let [, year, month, day] = match
+  if (year.length <= 2) year = String(2000 + Number(year))
+  if (year.length === 4 && Number(year) < 1000) year = String(2000 + Number(year.slice(-2)))
+  return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`
+}
+
+function normalizeIpoForm(form) {
+  return {
+    ...form,
+    subscription_start: normalizeDate(form.subscription_start),
+    subscription_end: normalizeDate(form.subscription_end),
+    listing_date: normalizeDate(form.listing_date),
+  }
 }
 
 const columns = [
@@ -40,7 +61,7 @@ const formFields = [
   { key: 'offer_price', label: '发行价', type: 'number' },
   { key: 'subscription_start', label: '招股开始日', type: 'date' },
   { key: 'subscription_end', label: '招股结束日', type: 'date' },
-  { key: 'listing_date', label: '暗盘日期', type: 'date' },
+  { key: 'listing_date', label: '暗盘日期', type: 'date', min: '2000-01-01', max: '2099-12-31' },
   { key: 'notes', label: '备注' },
 ]
 
@@ -50,7 +71,7 @@ export default function Ipos() {
   const navigate = useNavigate()
   const load = () => api.get('/ipos').then(setData)
   useEffect(() => { load() }, [])
-  const handleSubmit = async (form) => { if (modal.id) await api.put(`/ipos/${modal.id}`, form); else await api.post('/ipos', form); setModal(null); load() }
+  const handleSubmit = async (form) => { const payload = normalizeIpoForm(form); if (modal.id) await api.put(`/ipos/${modal.id}`, payload); else await api.post('/ipos', payload); setModal(null); load() }
   const handleDelete = async (id) => { if(confirm('确定删除?')) { await api.del(`/ipos/${id}`); load() }}
 
   return (

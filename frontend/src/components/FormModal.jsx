@@ -26,7 +26,7 @@ export default function FormModal({ title, fields, initial, onSubmit, onClose })
                 onChange={e => setForm({...form, [field.key]: e.target.value})}
                 className="w-full rounded-md px-2 py-1.5 text-xs outline-none"
                 style={{background: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-primary)'}}
-                placeholder={field.placeholder} required={field.required} />
+                placeholder={field.placeholder} required={field.required} min={field.min} max={field.max} />
             )}
           </div>
         ))}

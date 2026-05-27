@@ -59,8 +59,7 @@ function getSummaryValue(key, imported, importedRows, summary, subs, totalProfit
 }
 
 function darkMarketDate(ipo, imported) {
-  if (imported) return imported.dark_market_date || '待定'
-  return ipo.listing_date || '待定'
+  return ipo.listing_date || imported?.dark_market_date || '待定'
 }
 
 export default function IpoDetail() {
