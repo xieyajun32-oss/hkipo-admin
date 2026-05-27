@@ -58,6 +58,11 @@ function getSummaryValue(key, imported, importedRows, summary, subs, totalProfit
   return '-'
 }
 
+function darkMarketDate(ipo, imported) {
+  if (imported) return imported.dark_market_date || '待定'
+  return ipo.listing_date || '待定'
+}
+
 export default function IpoDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -128,7 +133,7 @@ export default function IpoDetail() {
       <div className="flex justify-between items-start mb-6">
         <div>
           <h1 className="text-2xl font-bold">{ipo.stock_name} ({ipo.stock_code})</h1>
-          <p className="text-sm text-gray-500 mt-1">发行价: {ipo.offer_price} | 上市日: {ipo.listing_date || '待定'}</p>
+          <p className="text-sm text-gray-500 mt-1">发行价: {ipo.offer_price} | 暗盘日期: {darkMarketDate(ipo, imported)}</p>
           {imported?.fee_rule && (
             <p className="text-xs text-gray-500 mt-1">
               卖出费用规则：卖出佣金 {imported.fee_rule.sell_commission} 元，结算费 {imported.fee_rule.settlement_fee} 元，交易税 {imported.fee_rule.transaction_tax} 元
@@ -142,7 +147,7 @@ export default function IpoDetail() {
       <div className="grid grid-cols-4 gap-3 mb-5">
         {summaryCards.map(([key, label]) => (
           <div key={key} className="rounded-md border p-3 text-center ipo-summary-card">
-            <div className="ipo-summary-value">{getSummaryValue(key, imported, importedRows, summary, subs, totalProfit)}</div>
+            <div className={`ipo-summary-value ${key === 'ipo_profit' ? 'ipo-profit-text' : ''}`}>{getSummaryValue(key, imported, importedRows, summary, subs, totalProfit)}</div>
             <div className="ipo-summary-label">{key === 'total_lots' && !imported ? '中签数' : label}</div>
           </div>
         ))}
@@ -169,7 +174,7 @@ export default function IpoDetail() {
                 {importedRows.map(row => (
                   <tr key={`${row.index}-${row.phone_code}`}>
                     {importedColumns.map(([key]) => (
-                      <td key={key} className="px-2 py-1.5 whitespace-nowrap">{fmt(row[key])}</td>
+                      <td key={key} className={`px-2 py-1.5 whitespace-nowrap ${key === 'ipo_profit' ? 'ipo-profit-text' : ''}`}>{fmt(row[key])}</td>
                     ))}
                   </tr>
                 ))}

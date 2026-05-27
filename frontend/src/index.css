@@ -113,3 +113,7 @@ body {
 .ipo-import-table tbody tr:hover {
   background: var(--bg-hover);
 }
+
+.ipo-profit-text {
+  color: var(--danger);
+}
