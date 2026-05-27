@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { api } from '../api/client'
 import DataTable from '../components/DataTable'
-import FormModal from '../components/FormModal'
 
 const BANK_INFO_MARKER = '银行信息数据:'
 
@@ -17,55 +16,71 @@ function extractBankInfo(row) {
   return {}
 }
 
-function bankInfoValue(row, key) {
-  return extractBankInfo(row)[key] ?? ''
+function bankInfoValue(row, ...path) {
+  let value = extractBankInfo(row)
+  for (const key of path) {
+    value = value?.[key]
+  }
+  return value ?? ''
+}
+
+function flattenValues(value) {
+  if (value == null) return []
+  if (typeof value !== 'object') return [String(value)]
+  return Object.values(value).flatMap(flattenValues)
 }
 
 const columns = [
-  { key: 'hsbc', label: '汇丰', render: (_, row) => bankInfoValue(row, '汇丰') },
-  { key: 'boc', label: '中银', render: (_, row) => bankInfoValue(row, '中银') },
-  { key: 'za', label: '众安', render: (_, row) => bankInfoValue(row, '众安') },
-  { key: 'astar_395', label: '天星395', render: (_, row) => bankInfoValue(row, '天星395') },
-  { key: 'citic', label: '中信', render: (_, row) => bankInfoValue(row, '中信') },
-  { key: 'phillip_390', label: '汇立390', render: (_, row) => bankInfoValue(row, '汇立390') },
-  { key: 'ant', label: '蚂蚁', render: (_, row) => bankInfoValue(row, '蚂蚁') },
+  { key: 'code', label: '编号', render: (_, row) => bankInfoValue(row, '编号') },
+  { key: 'phone_code', label: '手机编号', render: (_, row) => bankInfoValue(row, '手机编号') },
+  { key: 'name', label: '姓名', render: (_, row) => bankInfoValue(row, '姓名') },
   { key: 'phillip_bound_bank', label: '辉立绑定银行', render: (_, row) => bankInfoValue(row, '辉立绑定银行') },
-]
-
-const formFields = [
-  { key: 'person_id', label: '人员ID', type: 'number', required: true },
-  { key: 'bank_name', label: '银行名称', required: true },
-  { key: 'card_last4', label: '卡号后4位' },
-  { key: 'balance', label: '余额', type: 'number' },
-  { key: 'last_transaction_date', label: '最后动账日期', type: 'date' },
-  { key: 'status', label: '状态', type: 'select', options: [
-    { value: 'active', label: '正常' }, { value: 'frozen', label: '冻结' }, { value: 'inactive', label: '未激活' }
-  ]},
-  { key: 'notes', label: '备注' },
+  { key: 'hsbc_status', label: '汇丰 注册情况', render: (_, row) => bankInfoValue(row, '汇丰', '注册情况') },
+  { key: 'hsbc_login', label: '汇丰 是否能登陆', render: (_, row) => bankInfoValue(row, '汇丰', '是否能登陆') },
+  { key: 'hsbc_username', label: '汇丰 用户名', render: (_, row) => bankInfoValue(row, '汇丰', '用户名') },
+  { key: 'boc_status', label: '中银 注册情况', render: (_, row) => bankInfoValue(row, '中银', '注册情况') },
+  { key: 'boc_login', label: '中银 是否能登陆', render: (_, row) => bankInfoValue(row, '中银', '是否能登陆') },
+  { key: 'boc_username', label: '中银 用户名', render: (_, row) => bankInfoValue(row, '中银', '用户名') },
+  { key: 'za_status', label: '众安 注册情况', render: (_, row) => bankInfoValue(row, '众安', '注册情况') },
+  { key: 'za_login', label: '众安 是否能登陆', render: (_, row) => bankInfoValue(row, '众安', '是否能登陆') },
+  { key: 'za_account', label: '众安 众安账号387', render: (_, row) => bankInfoValue(row, '众安', '众安账号387') },
+  { key: 'za_username', label: '众安 用户名', render: (_, row) => bankInfoValue(row, '众安', '用户名') },
+  { key: 'za_transfer', label: '众安 5.14转入', render: (_, row) => bankInfoValue(row, '众安', '5.14转入') },
+  { key: 'astar_status', label: '天星395 天星', render: (_, row) => bankInfoValue(row, '天星395', '天星') },
+  { key: 'astar_login', label: '天星395 天星登陆', render: (_, row) => bankInfoValue(row, '天星395', '天星登陆') },
+  { key: 'astar_username', label: '天星395 用户名', render: (_, row) => bankInfoValue(row, '天星395', '用户名') },
+  { key: 'astar_transfer', label: '天星395 5.14转入', render: (_, row) => bankInfoValue(row, '天星395', '5.14转入') },
+  { key: 'citic_status', label: '中信 注册情况', render: (_, row) => bankInfoValue(row, '中信', '注册情况') },
+  { key: 'citic_login', label: '中信 是否能登陆', render: (_, row) => bankInfoValue(row, '中信', '是否能登陆') },
+  { key: 'citic_username', label: '中信 用户名', render: (_, row) => bankInfoValue(row, '中信', '用户名') },
+  { key: 'citic_transfer', label: '中信 5.14转入', render: (_, row) => bankInfoValue(row, '中信', '5.14转入') },
+  { key: 'phillip_status', label: '汇立390 注册情况', render: (_, row) => bankInfoValue(row, '汇立390', '注册情况') },
+  { key: 'phillip_login', label: '汇立390 是否能登陆', render: (_, row) => bankInfoValue(row, '汇立390', '是否能登陆') },
+  { key: 'phillip_username', label: '汇立390 用户名', render: (_, row) => bankInfoValue(row, '汇立390', '用户名') },
+  { key: 'phillip_transfer', label: '汇立390 5.14转入', render: (_, row) => bankInfoValue(row, '汇立390', '5.14转入') },
+  { key: 'ant_status', label: '蚂蚁 注册情况', render: (_, row) => bankInfoValue(row, '蚂蚁', '注册情况') },
+  { key: 'ant_login', label: '蚂蚁 是否能登陆', render: (_, row) => bankInfoValue(row, '蚂蚁', '是否能登陆') },
+  { key: 'ant_username', label: '蚂蚁 用户名', render: (_, row) => bankInfoValue(row, '蚂蚁', '用户名') },
 ]
 
 export default function BankCards() {
   const [data, setData] = useState([])
-  const [modal, setModal] = useState(null)
   const load = () => api.get('/bank-cards').then(rows => {
     setData(
       rows
         .filter(row => row.bank_name === '银行信息' || (row.notes || '').includes(BANK_INFO_MARKER))
+        .map(row => ({ ...row, search_text: flattenValues(extractBankInfo(row)).join(' ') }))
         .sort((a, b) => Number(a.person_id || a.id) - Number(b.person_id || b.id))
     )
   })
   useEffect(() => { load() }, [])
-  const handleSubmit = async (form) => { if (modal.id) await api.put(`/bank-cards/${modal.id}`, form); else await api.post('/bank-cards', form); setModal(null); load() }
-  const handleDelete = async (id) => { if(confirm('确定删除?')) { await api.del(`/bank-cards/${id}`); load() }}
 
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">银行信息</h1>
-        <button onClick={() => setModal({})} className="px-4 py-2 rounded-lg text-sm font-medium" style={{background: 'var(--accent)', color: '#1a1a1a'}}>+ 添加银行信息</button>
       </div>
-      <DataTable columns={columns} data={data} searchField="bank_name" onEdit={row => setModal(row)} onDelete={handleDelete} wide />
-      {modal && <FormModal title={modal.id ? '编辑银行信息' : '添加银行信息'} fields={formFields} initial={modal} onSubmit={handleSubmit} onClose={() => setModal(null)} />}
+      <DataTable columns={columns} data={data} searchField="search_text" wide />
     </div>
   )
 }
