@@ -126,3 +126,56 @@ body {
 .ipo-profit-text {
   color: var(--danger);
 }
+
+.template-panel {
+  background: var(--bg-card);
+  border: 1px solid var(--border-soft);
+  border-radius: 6px;
+  padding: 12px;
+}
+
+.template-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.template-field span {
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.template-field input,
+.template-textarea {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  padding: 6px 8px;
+  outline: none;
+}
+
+.template-field input:focus,
+.template-textarea:focus {
+  border-color: var(--accent);
+}
+
+.template-field input[readonly] {
+  color: var(--accent);
+}
+
+.template-textarea {
+  min-height: 214px;
+  resize: vertical;
+  line-height: 1.55;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+}
+
+.template-rule {
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.6;
+  border-top: 1px solid var(--border-soft);
+  padding-top: 10px;
+}
