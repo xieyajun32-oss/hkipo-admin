@@ -186,3 +186,39 @@ body {
   min-width: 96px;
   height: 26px;
 }
+
+.template-lot-control {
+  display: grid;
+  grid-template-columns: 24px 72px 24px 44px;
+  gap: 4px;
+  align-items: center;
+}
+
+.template-lot-control button,
+.template-lot-control input {
+  height: 26px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 12px;
+}
+
+.template-lot-control button {
+  cursor: pointer;
+}
+
+.template-lot-control button:hover {
+  border-color: var(--accent);
+}
+
+.template-lot-control input {
+  width: 72px;
+  padding: 0 6px;
+  text-align: right;
+}
+
+.template-lot-control .template-lot-reset {
+  color: var(--accent);
+  font-size: 11px;
+}

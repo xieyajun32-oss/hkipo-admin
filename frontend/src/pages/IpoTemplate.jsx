@@ -40,6 +40,16 @@ const defaultTiers = [
   { threshold: 50000, leverage: 10, fee: 88 },
   { threshold: 0, leverage: 10, fee: 28 },
 ]
+const allowedLotCounts = [
+  ...Array.from({ length: 10 }, (_, index) => index + 1),
+  15,
+  20,
+  ...Array.from({ length: 16 }, (_, index) => 25 + index * 5),
+  ...Array.from({ length: 10 }, (_, index) => 200 + index * 100),
+  2000,
+  3000,
+  43483,
+]
 
 function fmt(value, digits = 2) {
   if (value === null || value === undefined || Number.isNaN(value)) return '-'
@@ -86,6 +96,19 @@ function matchTier(capital, tiers) {
   return sorted.find(tier => capital >= Number(tier.threshold || 0)) || sorted.at(-1) || defaultTiers.at(-1)
 }
 
+function matchAllowedLotCount(value) {
+  const parsed = Math.floor(Number(value || 0))
+  if (!Number.isFinite(parsed) || parsed <= 0) return 0
+  return [...allowedLotCounts].reverse().find(lots => lots <= parsed) || 0
+}
+
+function adjacentAllowedLotCount(current, direction) {
+  const fallback = matchAllowedLotCount(current)
+  const index = allowedLotCounts.findIndex(lots => lots === fallback)
+  if (index < 0) return direction > 0 ? allowedLotCounts[0] : 0
+  return allowedLotCounts[Math.max(0, Math.min(allowedLotCounts.length - 1, index + direction))]
+}
+
 export default function IpoTemplate() {
   const navigate = useNavigate()
   const [stockName, setStockName] = useState('待确认IPO')
@@ -94,6 +117,7 @@ export default function IpoTemplate() {
   const [ipoPrice, setIpoPrice] = useState(66.4)
   const [tiers, setTiers] = useState(defaultTiers)
   const [accountsText, setAccountsText] = useState(defaultAccounts)
+  const [manualLots, setManualLots] = useState({})
   const [saving, setSaving] = useState(false)
 
   const costPrice = Number(ipoPrice || 0) * 1.01
@@ -107,28 +131,58 @@ export default function IpoTemplate() {
     }))
   }
 
+  const setManualRowLots = (row, value) => {
+    const key = row.accountKey
+    const capped = Math.min(Number(value || 0), row.maxLots)
+    setManualLots(current => ({ ...current, [key]: matchAllowedLotCount(capped) }))
+  }
+
+  const stepManualRowLots = (row, direction) => {
+    const key = row.accountKey
+    setManualLots(current => {
+      const base = current[key] ?? row.lots
+      const nextLots = adjacentAllowedLotCount(base, direction)
+      return { ...current, [key]: matchAllowedLotCount(Math.min(nextLots, row.maxLots)) }
+    })
+  }
+
+  const resetManualRowLots = (row) => {
+    const key = row.accountKey
+    setManualLots(current => {
+      const next = { ...current }
+      delete next[key]
+      return next
+    })
+  }
+
   const rows = useMemo(() => {
     return parseAccounts(accountsText).map(row => {
+      const accountKey = `${row.code}-${row.name}-${row.index}`
       const tier = matchTier(row.capital, tiers)
       const leverage = clampLeverage(tier?.leverage)
       const subscriptionFee = Number(tier?.fee || 0)
       const buyingPower = row.capital * leverage
-      const lots = lotCost > 0 ? Math.floor(buyingPower / lotCost) : 0
+      const maxLots = lotCost > 0 ? Math.floor(buyingPower / lotCost) : 0
+      const autoLots = matchAllowedLotCount(maxLots)
+      const lots = manualLots[accountKey] ?? autoLots
       const shares = lots * Number(lotShares || 0)
       const applicationAmount = lots * lotCost
 
       return {
         ...row,
+        accountKey,
         leverage,
         subscriptionFee,
         buyingPower,
+        maxLots,
+        autoLots,
         lots,
         shares,
         applicationAmount,
         strategy: tierLabel(tier),
       }
     })
-  }, [accountsText, lotCost, lotShares, tiers])
+  }, [accountsText, lotCost, lotShares, manualLots, tiers])
 
   const totals = rows.reduce((sum, row) => ({
     capital: sum.capital + row.capital,
@@ -277,7 +331,8 @@ export default function IpoTemplate() {
 
           <div className="template-rule mt-4">
             <div>成本价 = IPO 价格 × 1.01</div>
-            <div>认购手数 = 可认购资金 ÷ 每手成本，向下取整；申请金额 = 认购手数 × 每手成本。</div>
+            <div>先按可认购资金 ÷ 每手成本算出上限，再向下匹配招股书允许档位，例如 230 手会落到 200 手。</div>
+            <div>每行认购手数可手动调整；调整后会同步重算认购股数和申请金额。</div>
             <div>卖出佣金 75 元、结算费 2 元、交易税 3 元，仅中签账户产生；未中签账户不计这些卖出费用。</div>
           </div>
         </section>
@@ -348,7 +403,7 @@ export default function IpoTemplate() {
           </div>
         </div>
         <div className="overflow-x-auto rounded border" style={{ borderColor: 'var(--border)' }}>
-          <table className="w-full min-w-[1080px] text-xs ipo-import-table">
+          <table className="w-full min-w-[1240px] text-xs ipo-import-table">
             <thead>
               <tr>
                 <th className="text-left px-2 py-2">序号</th>
@@ -359,6 +414,7 @@ export default function IpoTemplate() {
                 <th className="text-left px-2 py-2">手续费</th>
                 <th className="text-left px-2 py-2">可认购资金</th>
                 <th className="text-left px-2 py-2">每手成本</th>
+                <th className="text-left px-2 py-2">自动上限</th>
                 <th className="text-left px-2 py-2">认购手数</th>
                 <th className="text-left px-2 py-2">认购股数</th>
                 <th className="text-left px-2 py-2">申请金额</th>
@@ -375,7 +431,19 @@ export default function IpoTemplate() {
                   <td className="px-2 py-1.5">{fmt(row.subscriptionFee, 0)}</td>
                   <td className="px-2 py-1.5">{fmt(row.buyingPower, 0)}</td>
                   <td className="px-2 py-1.5">{fmt(lotCost, 2)}</td>
-                  <td className="px-2 py-1.5 font-semibold">{fmt(row.lots, 0)}</td>
+                  <td className="px-2 py-1.5">{fmt(row.autoLots, 0)}</td>
+                  <td className="px-2 py-1.5">
+                    <div className="template-lot-control">
+                      <button type="button" onClick={() => stepManualRowLots(row, -1)}>-</button>
+                      <input
+                        type="number"
+                        value={row.lots}
+                        onChange={e => setManualRowLots(row, e.target.value)}
+                      />
+                      <button type="button" onClick={() => stepManualRowLots(row, 1)}>+</button>
+                      <button type="button" className="template-lot-reset" onClick={() => resetManualRowLots(row)}>自动</button>
+                    </div>
+                  </td>
                   <td className="px-2 py-1.5">{fmt(row.shares, 0)}</td>
                   <td className="px-2 py-1.5">{fmt(row.applicationAmount, 2)}</td>
                 </tr>
@@ -390,6 +458,7 @@ export default function IpoTemplate() {
                 <td />
                 <td className="px-2 py-2 font-semibold">{fmt(totals.subscriptionFee, 0)}</td>
                 <td className="px-2 py-2 font-semibold">{fmt(totals.buyingPower, 0)}</td>
+                <td />
                 <td />
                 <td className="px-2 py-2 font-semibold">{fmt(totals.lots, 0)}</td>
                 <td className="px-2 py-2 font-semibold">{fmt(totals.shares, 0)}</td>
