@@ -35,7 +35,7 @@ HK031 许磊（甲尾） 590,945
 HK032 黎祥 128,603
 HK033 方金华 146,721
 HK034 陈亮 56,394`
-const feeOptions = [88, 28, 68, 0]
+const feeOptions = [0, 28, 68, 88, 50, 100]
 const defaultTiers = [
   { threshold: 50000, leverage: 10, fee: 88 },
   { threshold: 0, leverage: 10, fee: 28 },
@@ -118,6 +118,7 @@ export default function IpoTemplate() {
   const [tiers, setTiers] = useState(defaultTiers)
   const [accountsText, setAccountsText] = useState(defaultAccounts)
   const [manualLots, setManualLots] = useState({})
+  const [manualFees, setManualFees] = useState({})
   const [saving, setSaving] = useState(false)
 
   const costPrice = Number(ipoPrice || 0) * 1.01
@@ -155,12 +156,27 @@ export default function IpoTemplate() {
     })
   }
 
+  const setManualRowFee = (row, value) => {
+    const key = row.accountKey
+    setManualFees(current => ({ ...current, [key]: Number(value) }))
+  }
+
+  const resetManualRowFee = (row) => {
+    const key = row.accountKey
+    setManualFees(current => {
+      const next = { ...current }
+      delete next[key]
+      return next
+    })
+  }
+
   const rows = useMemo(() => {
     return parseAccounts(accountsText).map(row => {
       const accountKey = `${row.code}-${row.name}-${row.index}`
       const tier = matchTier(row.capital, tiers)
       const leverage = clampLeverage(tier?.leverage)
-      const subscriptionFee = Number(tier?.fee || 0)
+      const tierFee = Number(tier?.fee || 0)
+      const subscriptionFee = manualFees[accountKey] ?? tierFee
       const buyingPower = row.capital * leverage
       const maxLots = lotCost > 0 ? Math.floor(buyingPower / lotCost) : 0
       const autoLots = matchAllowedLotCount(maxLots)
@@ -173,6 +189,7 @@ export default function IpoTemplate() {
         accountKey,
         leverage,
         subscriptionFee,
+        tierFee,
         buyingPower,
         maxLots,
         autoLots,
@@ -182,7 +199,7 @@ export default function IpoTemplate() {
         strategy: tierLabel(tier),
       }
     })
-  }, [accountsText, lotCost, lotShares, manualLots, tiers])
+  }, [accountsText, lotCost, lotShares, manualFees, manualLots, tiers])
 
   const totals = rows.reduce((sum, row) => ({
     capital: sum.capital + row.capital,
@@ -332,7 +349,7 @@ export default function IpoTemplate() {
           <div className="template-rule mt-4">
             <div>成本价 = IPO 价格 × 1.01</div>
             <div>先按可认购资金 ÷ 每手成本算出上限，再向下匹配招股书允许档位，例如 230 手会落到 200 手。</div>
-            <div>每行认购手数可手动调整；调整后会同步重算认购股数和申请金额。</div>
+            <div>每行认购手数和手续费都可手动调整；调整后会同步重算认购股数、申请金额和费用合计。</div>
             <div>卖出佣金 75 元、结算费 2 元、交易税 3 元，仅中签账户产生；未中签账户不计这些卖出费用。</div>
           </div>
         </section>
@@ -358,7 +375,7 @@ export default function IpoTemplate() {
         <div className="flex flex-wrap justify-between gap-2 mb-3">
           <h2 className="font-semibold">资金分界与手续费标准</h2>
           <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-            倍数限制 1-10；手续费可选 88、28、68、0。默认按本次策略：5万以上10倍融资，5万以下辉立28套餐。
+            倍数限制 1-10；手续费可选 0、28、50、68、88、100。默认按本次策略：5万以上10倍融资，5万以下辉立28套餐。
           </div>
         </div>
         <div className="overflow-x-auto rounded border" style={{ borderColor: 'var(--border)' }}>
@@ -428,7 +445,17 @@ export default function IpoTemplate() {
                   <td className="px-2 py-1.5">{row.name || '-'}</td>
                   <td className="px-2 py-1.5">{fmt(row.capital, 0)}</td>
                   <td className="px-2 py-1.5">{fmt(row.leverage, 0)}</td>
-                  <td className="px-2 py-1.5">{fmt(row.subscriptionFee, 0)}</td>
+                  <td className="px-2 py-1.5">
+                    <div className="template-fee-control">
+                      <select
+                        value={row.subscriptionFee}
+                        onChange={e => setManualRowFee(row, e.target.value)}
+                      >
+                        {feeOptions.map(fee => <option key={fee} value={fee}>{fee}</option>)}
+                      </select>
+                      <button type="button" onClick={() => resetManualRowFee(row)}>自动</button>
+                    </div>
+                  </td>
                   <td className="px-2 py-1.5">{fmt(row.buyingPower, 0)}</td>
                   <td className="px-2 py-1.5">{fmt(lotCost, 2)}</td>
                   <td className="px-2 py-1.5">{fmt(row.autoLots, 0)}</td>

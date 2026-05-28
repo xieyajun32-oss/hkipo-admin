@@ -222,3 +222,35 @@ body {
   color: var(--accent);
   font-size: 11px;
 }
+
+.template-fee-control {
+  display: grid;
+  grid-template-columns: 72px 44px;
+  gap: 4px;
+  align-items: center;
+}
+
+.template-fee-control select,
+.template-fee-control button {
+  height: 26px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 12px;
+}
+
+.template-fee-control select {
+  width: 72px;
+  padding: 0 6px;
+}
+
+.template-fee-control button {
+  cursor: pointer;
+  color: var(--accent);
+  font-size: 11px;
+}
+
+.template-fee-control button:hover {
+  border-color: var(--accent);
+}
