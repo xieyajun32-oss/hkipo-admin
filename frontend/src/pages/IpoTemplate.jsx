@@ -1,7 +1,9 @@
 import React, { useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { api } from '../api/client'
 
-const defaultAccounts = `HK001 贺理平 154775
-HK002 陈灵 159246
+const defaultAccounts = `HK001 贺理平 154,775
+HK002 陈灵 159,246
 HK003 丁玲 153875`
 const feeOptions = [88, 28, 68, 0]
 const defaultTiers = [
@@ -26,12 +28,15 @@ function parseAccounts(text) {
     .map(line => line.trim())
     .filter(Boolean)
     .map((line, index) => {
-      const parts = line.split(/[\s,\t，]+/).filter(Boolean)
-      const capital = Number(parts.at(-1))
+      const match = line.match(/^(\S+)\s+(.+?)\s+([\d,，.]+)$/)
+      const code = match?.[1] || ''
+      const name = match?.[2]?.trim() || ''
+      const capitalText = match?.[3] || ''
+      const capital = Number(capitalText.replace(/[，,]/g, ''))
       return {
         index: index + 1,
-        code: parts[0] || '',
-        name: parts.slice(1, -1).join('') || '',
+        code,
+        name,
         capital: Number.isFinite(capital) ? capital : 0,
       }
     })
@@ -54,12 +59,14 @@ function matchTier(capital, tiers) {
 }
 
 export default function IpoTemplate() {
+  const navigate = useNavigate()
   const [stockName, setStockName] = useState('')
   const [stockCode, setStockCode] = useState('')
   const [lotShares, setLotShares] = useState(150)
   const [ipoPrice, setIpoPrice] = useState(18.8)
   const [tiers, setTiers] = useState(defaultTiers)
   const [accountsText, setAccountsText] = useState(defaultAccounts)
+  const [saving, setSaving] = useState(false)
 
   const costPrice = Number(ipoPrice || 0) * 1.01
   const lotCost = Number(lotShares || 0) * costPrice
@@ -100,6 +107,97 @@ export default function IpoTemplate() {
     shares: sum.shares + row.shares,
     subscriptionFee: sum.subscriptionFee + row.subscriptionFee,
   }), { capital: 0, buyingPower: 0, lots: 0, shares: 0, subscriptionFee: 0 })
+
+  const buildIpoNotes = () => {
+    const applications = rows.map(row => {
+      const applicationAmount = row.lots * lotCost
+      return {
+        index: row.index,
+        phone_code: row.code,
+        name: row.name,
+        capital: row.capital,
+        broker: '',
+        lots_applied: row.lots,
+        shares_applied: row.shares,
+        shares_won: 0,
+        won_amount: 0,
+        subscription_fee: row.subscriptionFee,
+        winning_fee: 0,
+        stamp_formula: '',
+        stamp_duty: 0,
+        sell_commission: 0,
+        settlement_fee: 0,
+        transaction_tax: 0,
+        total_fee: row.subscriptionFee,
+        cost_price: costPrice,
+        sell_price: '',
+        sold: '',
+        sell_amount: 0,
+        trading_profit: 0,
+        ipo_profit: -row.subscriptionFee,
+        application_amount: applicationAmount,
+        leverage: row.leverage,
+        strategy: row.strategy,
+      }
+    })
+
+    return {
+      source: 'ipo-template',
+      imported_at: new Date().toISOString(),
+      lot_shares: Number(lotShares || 0),
+      ipo_price: Number(ipoPrice || 0),
+      cost_price: costPrice,
+      lot_cost: lotCost,
+      fee_rule: {
+        sell_commission: 75,
+        settlement_fee: 2,
+        transaction_tax: 3,
+      },
+      tiers,
+      applications,
+      summary: {
+        accounts: rows.length,
+        total_capital: totals.capital,
+        total_buying_power: totals.buyingPower,
+        total_lots: totals.lots,
+        total_shares_applied: totals.shares,
+        total_subscription_fee: totals.subscriptionFee,
+        total_fee: totals.subscriptionFee,
+        total_shares_won: 0,
+        total_won_amount: 0,
+        total_sell_amount: 0,
+        trading_profit: 0,
+        ipo_profit: -totals.subscriptionFee,
+      },
+    }
+  }
+
+  const handleConfirmImport = async () => {
+    if (!stockName.trim()) return alert('请先填写股票名称')
+    if (!rows.length) return alert('请先输入账户资金')
+    if (rows.some(row => !row.code || !row.name || row.capital <= 0)) {
+      return alert('账户格式不完整，请按“手机编号 姓名 账户资金”输入')
+    }
+    if (!window.confirm(`确认把 ${stockName || '该股票'} 的 ${rows.length} 个账户打新数据导入 IPO 打新？`)) return
+
+    setSaving(true)
+    try {
+      const payload = {
+        stock_name: stockName.trim(),
+        stock_code: stockCode.trim(),
+        offer_price: Number(ipoPrice || 0),
+        notes: JSON.stringify(buildIpoNotes()),
+      }
+      const created = await api.post('/ipos', payload)
+      alert('已导入 IPO 打新')
+      if (created?.id) navigate(`/admin/ipos/${created.id}`)
+      else navigate('/admin/ipos')
+    } catch (error) {
+      alert(error.message || '导入失败')
+    } finally {
+      setSaving(false)
+    }
+  }
 
   return (
     <div>
@@ -158,6 +256,7 @@ export default function IpoTemplate() {
             <h2 className="font-semibold">账户资金输入</h2>
             <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>
               每行格式：手机编号 姓名 账户资金
+              <span className="ml-2">支持千分位，例如：HK001 贺理平 154,775</span>
             </div>
           </div>
           <textarea
@@ -225,7 +324,6 @@ export default function IpoTemplate() {
                 <th className="text-left px-2 py-2">手机编号</th>
                 <th className="text-left px-2 py-2">姓名</th>
                 <th className="text-left px-2 py-2">账户资金</th>
-                <th className="text-left px-2 py-2">策略</th>
                 <th className="text-left px-2 py-2">融资倍数</th>
                 <th className="text-left px-2 py-2">手续费</th>
                 <th className="text-left px-2 py-2">可认购资金</th>
@@ -241,7 +339,6 @@ export default function IpoTemplate() {
                   <td className="px-2 py-1.5">{row.code}</td>
                   <td className="px-2 py-1.5">{row.name || '-'}</td>
                   <td className="px-2 py-1.5">{fmt(row.capital, 0)}</td>
-                  <td className="px-2 py-1.5">{row.strategy}</td>
                   <td className="px-2 py-1.5">{fmt(row.leverage, 0)}</td>
                   <td className="px-2 py-1.5">{fmt(row.subscriptionFee, 0)}</td>
                   <td className="px-2 py-1.5">{fmt(row.buyingPower, 0)}</td>
@@ -258,7 +355,6 @@ export default function IpoTemplate() {
                 <td />
                 <td className="px-2 py-2 font-semibold">{fmt(totals.capital, 0)}</td>
                 <td />
-                <td />
                 <td className="px-2 py-2 font-semibold">{fmt(totals.subscriptionFee, 0)}</td>
                 <td className="px-2 py-2 font-semibold">{fmt(totals.buyingPower, 0)}</td>
                 <td />
@@ -267,6 +363,17 @@ export default function IpoTemplate() {
               </tr>
             </tfoot>
           </table>
+        </div>
+        <div className="flex flex-wrap justify-end gap-3 mt-4">
+          <button
+            type="button"
+            onClick={handleConfirmImport}
+            disabled={saving}
+            className="px-4 py-2 rounded-lg text-sm font-semibold disabled:opacity-60"
+            style={{ background: 'var(--accent)', color: '#1a1a1a' }}
+          >
+            {saving ? '正在导入...' : '确认无误，导入 IPO 打新'}
+          </button>
         </div>
       </section>
     </div>
