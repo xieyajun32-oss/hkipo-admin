@@ -254,3 +254,104 @@ body {
 .template-fee-control button:hover {
   border-color: var(--accent);
 }
+
+.brief-page-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.brief-page-head p {
+  margin-top: 4px;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.brief-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+  gap: 12px;
+}
+
+.brief-card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-card);
+  padding: 14px;
+}
+
+.brief-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.brief-card-head h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.brief-code {
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.brief-card-head span {
+  flex: 0 0 auto;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 3px 8px;
+  color: var(--accent);
+  font-size: 12px;
+  background: var(--bg-secondary);
+}
+
+.brief-summary {
+  margin: 0 0 12px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.brief-metrics {
+  display: grid;
+  gap: 1px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.brief-metric-row {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  min-height: 34px;
+  background: var(--bg-primary);
+}
+
+.brief-metric-row > div {
+  padding: 8px 10px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.brief-metric-row > div:first-child {
+  color: var(--text-muted);
+  background: var(--bg-secondary);
+}
+
+.brief-metric-row > div:last-child {
+  color: var(--text-primary);
+}
+
+.brief-source {
+  display: inline-flex;
+  margin-top: 10px;
+  color: var(--accent);
+  font-size: 12px;
+}

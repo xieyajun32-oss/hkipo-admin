@@ -26,6 +26,7 @@ export default function Dashboard() {
     { label: '🏦 银行信息', path: '/admin/bank-cards', color: '#4ade80' },
     { label: '📱 手机卡管理', path: '/admin/sim-cards', color: '#60a5fa' },
     { label: '🎯 IPO打新', path: '/admin/ipos', color: '#f472b6' },
+    { label: '🧾 港股简报', path: '/admin/hk-brief', color: '#38bdf8' },
     { label: '📋 信息总表', path: '/admin/persons', color: '#a78bfa' },
   ]
 
@@ -33,7 +34,7 @@ export default function Dashboard() {
     <div>
       {/* Greeting */}
       <div className="mb-8">
-        <h1 className="text-2xl font-bold mb-1">{greeting}，芦苇草 👋</h1>
+        <h1 className="text-2xl font-bold mb-1">{greeting}，老谢</h1>
         <p style={{color: 'var(--text-secondary)'}}>所有账号/银行卡/手机卡数据都在这里。点下方任意卡片进入管理。</p>
       </div>
 

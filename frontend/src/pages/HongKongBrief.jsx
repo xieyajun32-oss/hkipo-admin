@@ -1,0 +1,95 @@
+import React from 'react'
+
+const briefs = [
+  {
+    name: '创想三维',
+    code: 'HK：3388',
+    tag: '3D 打印生态',
+    summary: '做 3D 打印整机及围绕整机的一整套生态，包括耗材、零部件、软件和解决方案，重心在桌面级 FDM 消费及轻工业市场。',
+    metrics: [
+      ['市值', '87.93亿'],
+      ['募资规模', '13.8亿'],
+      ['发行占比', '15.7%'],
+      ['回拨机制', 'B（10%）'],
+      ['超额配售权', '有绿鞋'],
+      ['保荐人', '中金'],
+      ['基石', '49.9%（泰康人寿、中信兴业投资等15家）'],
+      ['入场费', '发行价18.8，每手150股，2849港币；甲尾1000手284.9万，乙头2000手569.7万'],
+      ['发行结构', '发行7342.755万股（48.9517万手，占比10%），香港公开发售48952手，甲乙组各24476手'],
+    ],
+    source: 'https://www1.hkexnews.hk/listedco/listconews/sehk/2026/0520/2026052000024_c.pdf',
+  },
+  {
+    name: '龙丰集团',
+    code: 'HK：2290',
+    tag: '香港药妆零售',
+    summary: '香港本地美妆、保健产品、药品及其他消费品零售商，同时做少量线上零售及批发。2025财年在香港美妆、保健产品及药品零售市场排名第三，市场份额约5.8%。',
+    metrics: [
+      ['市值', '25.90亿-31.90亿港元'],
+      ['募资规模', '约6.48亿-7.98亿港元；按中位价5.78港元，净募资约6.721亿港元'],
+      ['发行占比', '25.0%；若绿鞋全数行使，额外约3.6%'],
+      ['回拨机制', 'B（10%），公开发售最多回拨至15%'],
+      ['超额配售权', '有绿鞋，最多1875万股，占初始发售股份15%'],
+      ['保荐人', '星展亚洲融资'],
+      ['基石', '无披露基石投资者'],
+      ['入场费', '最高发行价6.38，每手500股，3222.17港币；甲尾6250手约2013.86万港币，乙头为超过500万港币申请'],
+      ['发行结构', '发行1.25亿股，香港公开发售1250万股（2.5万手），甲乙组各约1.25万手；国际发售1.125亿股'],
+    ],
+    source: 'https://www1.hkexnews.hk/listedco/listconews/sehk/2026/0528/2026052800032_c.pdf',
+  },
+  {
+    name: '天辰生物',
+    code: 'HK：01779',
+    tag: '18A 生物医药',
+    summary: '处于商业化前阶段的创新药公司，核心产品围绕过敏、补体相关疾病等管线推进。公司仍属18A未盈利生物科技股，投资判断重点看管线质量、估值、基石和市场热度。',
+    metrics: [
+      ['市值', 'H股市值约70.06亿港元；股份总市值约71.27亿港元'],
+      ['募资规模', '发行价96.06港元，全球发售约13.63亿港元；净募资约12.549亿港元'],
+      ['发行占比', '发行1419.315万股H股，约占发行后总股本19.13%'],
+      ['回拨机制', 'B（10%），公开发售最多回拨至15%'],
+      ['超额配售权', '有绿鞋，最多212.895万股H股，占初始发售股份约15%'],
+      ['保荐人', '国金证券（香港）'],
+      ['基石', '49.96%，合计8700万美元；OrbiMed、TruMed、华泰/高毅/睿郡、睿远、富国、惠理、GBAHIL、FR M、源峰/银河等'],
+      ['入场费', '发行价96.06，每手50股，4851.44港币；甲尾10万股约970.29万港币，乙头20万股约1940.58万港币'],
+      ['发行结构', '发行1419.315万股H股，香港公开发售141.935万股（28387手），甲乙组各约14193手；国际发售1277.38万股'],
+    ],
+    source: 'https://www1.hkexnews.hk/listedco/listconews/sehk/2026/0528/2026052800024_c.pdf',
+  },
+]
+
+export default function HongKongBrief() {
+  return (
+    <div>
+      <div className="brief-page-head">
+        <div>
+          <h1 className="text-2xl font-bold">港股简报</h1>
+          <p>近期 IPO 重点信息，按打新决策口径整理。</p>
+        </div>
+      </div>
+
+      <div className="brief-grid">
+        {briefs.map(brief => (
+          <section key={brief.code} className="brief-card">
+            <div className="brief-card-head">
+              <div>
+                <h2>{brief.name}</h2>
+                <div className="brief-code">{brief.code}</div>
+              </div>
+              <span>{brief.tag}</span>
+            </div>
+            <p className="brief-summary">{brief.summary}</p>
+            <div className="brief-metrics">
+              {brief.metrics.map(([label, value]) => (
+                <div key={label} className="brief-metric-row">
+                  <div>{label}</div>
+                  <div>{value}</div>
+                </div>
+              ))}
+            </div>
+            <a className="brief-source" href={brief.source} target="_blank" rel="noreferrer">招股书</a>
+          </section>
+        ))}
+      </div>
+    </div>
+  )
+}

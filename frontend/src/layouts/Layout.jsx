@@ -9,6 +9,7 @@ const nav = [
   { path: '/admin/sim-cards', label: '手机卡', icon: '📱' },
   { path: '/admin/brokers', label: '券商账号', icon: '📈' },
   { path: '/admin/ipos', label: 'IPO打新', icon: '🎯' },
+  { path: '/admin/hk-brief', label: '港股简报', icon: '🧾' },
   { path: '/admin/ipo-template', label: '打新模板', icon: '🧮' },
 ]
 
