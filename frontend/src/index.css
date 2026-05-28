@@ -146,7 +146,8 @@ body {
 }
 
 .template-field input,
-.template-textarea {
+.template-textarea,
+.template-table-input {
   width: 100%;
   border: 1px solid var(--border);
   border-radius: 4px;
@@ -157,7 +158,8 @@ body {
 }
 
 .template-field input:focus,
-.template-textarea:focus {
+.template-textarea:focus,
+.template-table-input:focus {
   border-color: var(--accent);
 }
 
@@ -178,4 +180,9 @@ body {
   line-height: 1.6;
   border-top: 1px solid var(--border-soft);
   padding-top: 10px;
+}
+
+.template-table-input {
+  min-width: 96px;
+  height: 26px;
 }
