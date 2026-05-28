@@ -18,6 +18,18 @@ function fmt(value) {
   return typeof value === 'number' ? value.toLocaleString() : value
 }
 
+function winningLots(row) {
+  const imported = parseIpoNotes(row.notes)
+  const sharesWon = imported?.summary?.total_shares_won
+  if (!sharesWon) return '-'
+
+  const sample = imported.applications.find(item => item.shares_applied && item.lots_applied)
+  const lotSize = sample ? sample.shares_applied / sample.lots_applied : null
+  if (!lotSize) return fmt(sharesWon)
+
+  return fmt(sharesWon / lotSize)
+}
+
 function darkMarketDate(row) {
   return row.listing_date || parseIpoNotes(row.notes)?.dark_market_date || '-'
 }
@@ -49,6 +61,7 @@ const columns = [
   { key: 'offer_price', label: '发行价' },
   { key: 'applications_count', label: '申购账号', render: (_, row) => parseIpoNotes(row.notes)?.applications?.length || '-' },
   { key: 'total_lots', label: '认购手数', render: (_, row) => fmt(parseIpoNotes(row.notes)?.summary?.total_lots) },
+  { key: 'winning_lots', label: '中签数量', render: (_, row) => winningLots(row) },
   { key: 'total_fee', label: '手续费合计', render: (_, row) => fmt(parseIpoNotes(row.notes)?.summary?.total_fee) },
   { key: 'ipo_profit', label: '打新利润', render: (_, row) => <span className="ipo-profit-text">{fmt(parseIpoNotes(row.notes)?.summary?.ipo_profit)}</span> },
   { key: 'subscription_start', label: '招股开始' },

@@ -114,6 +114,15 @@ body {
   background: var(--bg-hover);
 }
 
+.ipo-import-table tfoot tr {
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border);
+}
+
+.ipo-import-table tfoot td {
+  color: var(--text-primary);
+}
+
 .ipo-profit-text {
   color: var(--danger);
 }

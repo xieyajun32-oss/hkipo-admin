@@ -35,6 +35,19 @@ const summaryCards = [
   ['ipo_profit', '总盈亏'],
 ]
 
+const totalFieldMap = {
+  shares_applied: 'total_shares_applied',
+  shares_won: 'total_shares_won',
+  won_amount: 'total_won_amount',
+  subscription_fee: 'total_subscription_fee',
+  total_fee: 'total_fee',
+  sell_amount: 'total_sell_amount',
+  trading_profit: 'trading_profit',
+  ipo_profit: 'ipo_profit',
+}
+
+const totalColumns = new Set(Object.keys(totalFieldMap))
+
 function parseIpoNotes(notes) {
   if (!notes) return null
   try {
@@ -48,6 +61,17 @@ function parseIpoNotes(notes) {
 function fmt(value) {
   if (value === null || value === undefined || value === '') return '-'
   return typeof value === 'number' ? value.toLocaleString() : value
+}
+
+function sumRows(rows, key) {
+  return rows.reduce((sum, row) => sum + (Number(row[key]) || 0), 0)
+}
+
+function totalValue(key, rows, summary) {
+  const summaryKey = totalFieldMap[key]
+  if (!summaryKey) return ''
+  const value = summary?.[summaryKey]
+  return fmt(value ?? sumRows(rows, key))
 }
 
 function getSummaryValue(key, imported, importedRows, summary, subs, totalProfit) {
@@ -178,6 +202,15 @@ export default function IpoDetail() {
                   </tr>
                 ))}
               </tbody>
+              <tfoot>
+                <tr>
+                  {importedColumns.map(([key]) => (
+                    <td key={key} className={`px-2 py-2 whitespace-nowrap font-semibold ${key === 'ipo_profit' ? 'ipo-profit-text' : ''}`}>
+                      {key === 'index' ? '合计' : totalColumns.has(key) ? totalValue(key, importedRows, summary) : ''}
+                    </td>
+                  ))}
+                </tr>
+              </tfoot>
             </table>
           </div>
         </div>
