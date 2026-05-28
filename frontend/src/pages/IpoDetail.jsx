@@ -10,6 +10,7 @@ const importedColumns = [
   ['broker', '券商'],
   ['lots_applied', '认购手数'],
   ['shares_applied', '认购股数'],
+  ['application_amount', '申请金额'],
   ['shares_won', '中签股数'],
   ['won_amount', '中签金额'],
   ['subscription_fee', '手续费'],
@@ -37,6 +38,7 @@ const summaryCards = [
 
 const totalFieldMap = {
   shares_applied: 'total_shares_applied',
+  application_amount: 'total_application_amount',
   shares_won: 'total_shares_won',
   won_amount: 'total_won_amount',
   subscription_fee: 'total_subscription_fee',

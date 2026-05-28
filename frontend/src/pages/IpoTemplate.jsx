@@ -4,13 +4,41 @@ import { api } from '../api/client'
 
 const defaultAccounts = `HK001 贺理平 154,775
 HK002 陈灵 159,246
-HK003 丁玲 153875`
+HK003 丁玲 153,875
+HK004 叶炫 158,233
+HK005 何倩 107,050
+HK006 陈晓欣 149,189
+HK007 陈惠如 31,196
+HK009 何存琼 162,430
+HK010 张青明 106,250
+HK011 张发明 115,801
+HK012 张中秀 163,685
+HK013 赵继恒 168,686
+HK014 黄中梅（甲尾） 550,111
+HK015 谢玉华 218,117
+HK016 胡秋兰（甲尾） 544,355
+HK017 江青霖（甲尾） 537,089
+HK018 赖振兴 25,488
+HK019 文清杨（甲尾） 543,014
+HK020 刘雨 145,902
+HK021 王水秀 133,245
+HK022 李爱君 10,010
+HK023 刘德桂 163,728
+HK024 文成玲 107,487
+HK025 刘江南（甲尾） 400,000
+HK026 李中茹 148,453
+HK027 周伟（甲尾） 538,221
+HK028 李嘉诚（甲尾） 486,195
+HK029 王茗（甲尾） 527,949
+HK030 张李磊（甲尾） 566,748
+HK031 许磊（甲尾） 590,945
+HK032 黎祥 128,603
+HK033 方金华 146,721
+HK034 陈亮 56,394`
 const feeOptions = [88, 28, 68, 0]
 const defaultTiers = [
-  { threshold: 100000, leverage: 10, fee: 88 },
-  { threshold: 50000, leverage: 5, fee: 68 },
-  { threshold: 20000, leverage: 3, fee: 28 },
-  { threshold: 0, leverage: 1, fee: 0 },
+  { threshold: 50000, leverage: 10, fee: 88 },
+  { threshold: 0, leverage: 10, fee: 28 },
 ]
 
 function fmt(value, digits = 2) {
@@ -60,10 +88,10 @@ function matchTier(capital, tiers) {
 
 export default function IpoTemplate() {
   const navigate = useNavigate()
-  const [stockName, setStockName] = useState('')
+  const [stockName, setStockName] = useState('待确认IPO')
   const [stockCode, setStockCode] = useState('')
-  const [lotShares, setLotShares] = useState(150)
-  const [ipoPrice, setIpoPrice] = useState(18.8)
+  const [lotShares, setLotShares] = useState(100)
+  const [ipoPrice, setIpoPrice] = useState(66.4)
   const [tiers, setTiers] = useState(defaultTiers)
   const [accountsText, setAccountsText] = useState(defaultAccounts)
   const [saving, setSaving] = useState(false)
@@ -87,6 +115,7 @@ export default function IpoTemplate() {
       const buyingPower = row.capital * leverage
       const lots = lotCost > 0 ? Math.floor(buyingPower / lotCost) : 0
       const shares = lots * Number(lotShares || 0)
+      const applicationAmount = lots * lotCost
 
       return {
         ...row,
@@ -95,6 +124,7 @@ export default function IpoTemplate() {
         buyingPower,
         lots,
         shares,
+        applicationAmount,
         strategy: tierLabel(tier),
       }
     })
@@ -105,12 +135,12 @@ export default function IpoTemplate() {
     buyingPower: sum.buyingPower + row.buyingPower,
     lots: sum.lots + row.lots,
     shares: sum.shares + row.shares,
+    applicationAmount: sum.applicationAmount + row.applicationAmount,
     subscriptionFee: sum.subscriptionFee + row.subscriptionFee,
-  }), { capital: 0, buyingPower: 0, lots: 0, shares: 0, subscriptionFee: 0 })
+  }), { capital: 0, buyingPower: 0, lots: 0, shares: 0, applicationAmount: 0, subscriptionFee: 0 })
 
   const buildIpoNotes = () => {
     const applications = rows.map(row => {
-      const applicationAmount = row.lots * lotCost
       return {
         index: row.index,
         phone_code: row.code,
@@ -135,7 +165,7 @@ export default function IpoTemplate() {
         sell_amount: 0,
         trading_profit: 0,
         ipo_profit: -row.subscriptionFee,
-        application_amount: applicationAmount,
+        application_amount: row.applicationAmount,
         leverage: row.leverage,
         strategy: row.strategy,
       }
@@ -161,6 +191,7 @@ export default function IpoTemplate() {
         total_buying_power: totals.buyingPower,
         total_lots: totals.lots,
         total_shares_applied: totals.shares,
+        total_application_amount: totals.applicationAmount,
         total_subscription_fee: totals.subscriptionFee,
         total_fee: totals.subscriptionFee,
         total_shares_won: 0,
@@ -246,7 +277,7 @@ export default function IpoTemplate() {
 
           <div className="template-rule mt-4">
             <div>成本价 = IPO 价格 × 1.01</div>
-            <div>认购手数 = 可认购资金 ÷ 每手成本，向下取整。</div>
+            <div>认购手数 = 可认购资金 ÷ 每手成本，向下取整；申请金额 = 认购手数 × 每手成本。</div>
             <div>卖出佣金 75 元、结算费 2 元、交易税 3 元，仅中签账户产生；未中签账户不计这些卖出费用。</div>
           </div>
         </section>
@@ -272,7 +303,7 @@ export default function IpoTemplate() {
         <div className="flex flex-wrap justify-between gap-2 mb-3">
           <h2 className="font-semibold">资金分界与手续费标准</h2>
           <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-            倍数限制 1-10；手续费可选 88、28、68、0。
+            倍数限制 1-10；手续费可选 88、28、68、0。默认按本次策略：5万以上10倍融资，5万以下辉立28套餐。
           </div>
         </div>
         <div className="overflow-x-auto rounded border" style={{ borderColor: 'var(--border)' }}>
@@ -317,7 +348,7 @@ export default function IpoTemplate() {
           </div>
         </div>
         <div className="overflow-x-auto rounded border" style={{ borderColor: 'var(--border)' }}>
-          <table className="w-full min-w-[980px] text-xs ipo-import-table">
+          <table className="w-full min-w-[1080px] text-xs ipo-import-table">
             <thead>
               <tr>
                 <th className="text-left px-2 py-2">序号</th>
@@ -330,6 +361,7 @@ export default function IpoTemplate() {
                 <th className="text-left px-2 py-2">每手成本</th>
                 <th className="text-left px-2 py-2">认购手数</th>
                 <th className="text-left px-2 py-2">认购股数</th>
+                <th className="text-left px-2 py-2">申请金额</th>
               </tr>
             </thead>
             <tbody>
@@ -345,6 +377,7 @@ export default function IpoTemplate() {
                   <td className="px-2 py-1.5">{fmt(lotCost, 2)}</td>
                   <td className="px-2 py-1.5 font-semibold">{fmt(row.lots, 0)}</td>
                   <td className="px-2 py-1.5">{fmt(row.shares, 0)}</td>
+                  <td className="px-2 py-1.5">{fmt(row.applicationAmount, 2)}</td>
                 </tr>
               ))}
             </tbody>
@@ -360,6 +393,7 @@ export default function IpoTemplate() {
                 <td />
                 <td className="px-2 py-2 font-semibold">{fmt(totals.lots, 0)}</td>
                 <td className="px-2 py-2 font-semibold">{fmt(totals.shares, 0)}</td>
+                <td className="px-2 py-2 font-semibold">{fmt(totals.applicationAmount, 2)}</td>
               </tr>
             </tfoot>
           </table>
