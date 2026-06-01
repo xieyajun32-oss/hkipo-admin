@@ -28,6 +28,7 @@ export default function Dashboard() {
     { label: '🎯 IPO打新', path: '/admin/ipos', color: '#f472b6' },
     { label: '🧾 港股简报', path: '/admin/hk-brief', color: '#38bdf8' },
     { label: '📋 信息总表', path: '/admin/persons', color: '#a78bfa' },
+    { label: '💰 资金总表', path: '/admin/funds', color: '#facc15' },
   ]
 
   return (

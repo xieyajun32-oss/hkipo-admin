@@ -5,6 +5,7 @@ import Layout from './layouts/Layout'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import Persons from './pages/Persons'
+import Funds from './pages/Funds'
 import BankCards from './pages/BankCards'
 import SimCards from './pages/SimCards'
 import Brokers from './pages/Brokers'
@@ -24,6 +25,7 @@ export default function App() {
       <Route path="/admin" element={<PrivateRoute><Layout /></PrivateRoute>}>
         <Route index element={<Dashboard />} />
         <Route path="persons" element={<Persons />} />
+        <Route path="funds" element={<Funds />} />
         <Route path="bank-cards" element={<BankCards />} />
         <Route path="sim-cards" element={<SimCards />} />
         <Route path="brokers" element={<Brokers />} />
