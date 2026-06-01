@@ -49,12 +49,13 @@ const stockStrategies = {
   free: { label: '免费餐', weight: 12, capLots: 5, fixedFee: 0, desc: '免费餐，不计申购手续费，只打几手' },
 }
 const defaultStocks = [
-  { id: 'stock-a', name: '核心票', code: '', lotShares: 100, ipoPrice: 66.4, strategy: 'full' },
-  { id: 'stock-b', name: '次核心票', code: '', lotShares: 100, ipoPrice: 30, strategy: 'focus' },
-  { id: 'stock-c', name: '试探票', code: '', lotShares: 100, ipoPrice: 12, strategy: 'free' },
+  { id: 'stock-a', name: '天辰生物', code: '1779', lotShares: 50, ipoPrice: 96.06, strategy: 'full', rule: 'tianchen_full' },
+  { id: 'stock-b', name: '龙丰集团', code: '2290', lotShares: 500, ipoPrice: 6.38, strategy: 'focus', rule: 'longfeng_after_tianchen' },
+  { id: 'stock-c', name: '大金重工', code: '1081', lotShares: 100, ipoPrice: 66.4, strategy: 'fee28', rule: 'dajin_remaining' },
 ]
 const allowedLotCounts = [
   ...Array.from({ length: 10 }, (_, index) => index + 1),
+  14,
   15,
   20,
   ...Array.from({ length: 16 }, (_, index) => 25 + index * 5),
@@ -138,6 +139,58 @@ function makeManualKey(row, stock) {
   return `${row.accountKey}-${stock.id}`
 }
 
+function planByRule(stock, remainingPower, accountFee) {
+  const strategy = stockStrategy(stock)
+  const { costPrice, lotCost } = stockCost(stock)
+  const affordableLots = lotCost > 0 ? Math.floor(remainingPower / lotCost) : 0
+  const fallbackFee = strategy.fixedFee === undefined ? accountFee : strategy.fixedFee
+  let targetAmount = remainingPower
+  let maxLots = affordableLots
+  let autoLots = matchAllowedLotCount(affordableLots)
+  let subscriptionFee = fallbackFee
+  let ruleNote = strategy.desc
+
+  if (stock.rule === 'longfeng_after_tianchen') {
+    if (remainingPower >= 30000) {
+      autoLots = matchAllowedLotCount(affordableLots)
+      subscriptionFee = accountFee
+      ruleNote = '天辰打完后，剩余额度3万以上全部打龙丰'
+    } else {
+      targetAmount = Math.min(14 * lotCost, remainingPower)
+      maxLots = Math.min(14, affordableLots)
+      autoLots = affordableLots >= 14 ? 14 : matchAllowedLotCount(affordableLots)
+      subscriptionFee = 28
+      ruleNote = '天辰打完后，剩余额度3万以下按28套餐14手'
+    }
+  } else if (stock.rule === 'dajin_remaining') {
+    const sevenLotsCost = 7 * lotCost
+    if (remainingPower >= sevenLotsCost) {
+      targetAmount = sevenLotsCost
+      maxLots = Math.min(7, affordableLots)
+      autoLots = 7
+      subscriptionFee = 28
+      ruleNote = '剩余额度按大金28套餐7手'
+    } else {
+      targetAmount = Math.min(lotCost, remainingPower)
+      maxLots = Math.min(1, affordableLots)
+      autoLots = affordableLots >= 1 ? 1 : 0
+      subscriptionFee = 0
+      ruleNote = '剩余额度不足7手时，大金先打一手'
+    }
+  }
+
+  return {
+    strategy,
+    costPrice,
+    lotCost,
+    targetAmount,
+    maxLots,
+    autoLots,
+    subscriptionFee,
+    ruleNote,
+  }
+}
+
 export default function IpoTemplate() {
   const navigate = useNavigate()
   const [stocks, setStocks] = useState(defaultStocks)
@@ -146,8 +199,6 @@ export default function IpoTemplate() {
   const [manualLots, setManualLots] = useState({})
   const [manualFees, setManualFees] = useState({})
   const [saving, setSaving] = useState(false)
-
-  const strategyWeightTotal = stocks.reduce((sum, stock) => sum + stockStrategy(stock).weight, 0) || 1
 
   const updateStock = (index, key, value) => {
     setStocks(current => current.map((stock, idx) => {
@@ -211,31 +262,28 @@ export default function IpoTemplate() {
       const tierFee = Number(tier?.fee || 0)
       const subscriptionFee = manualFees[accountKey] ?? tierFee
       const buyingPower = row.capital * leverage
+      let remainingPower = buyingPower
       const stockPlans = stocks.map(stock => {
-        const { costPrice, lotCost } = stockCost(stock)
-        const strategy = stockStrategy(stock)
-        const targetAmount = buyingPower * (strategy.weight / strategyWeightTotal)
-        const maxLots = lotCost > 0 ? Math.floor(targetAmount / lotCost) : 0
-        const strategyMaxLots = strategy.capLots ? Math.min(maxLots, strategy.capLots) : maxLots
-        const autoLots = strategy.fixedLots ? (buyingPower >= lotCost ? strategy.fixedLots : 0) : matchAllowedLotCount(strategyMaxLots)
+        const autoPlan = planByRule(stock, remainingPower, subscriptionFee)
         const planKey = makeManualKey({ accountKey }, stock)
-        const lots = manualLots[planKey] ?? autoLots
+        const lots = manualLots[planKey] ?? autoPlan.autoLots
         const shares = lots * Number(stock.lotShares || 0)
-        const applicationAmount = lots * lotCost
-        const planFee = strategy.fixedFee === undefined ? subscriptionFee : strategy.fixedFee
+        const applicationAmount = lots * autoPlan.lotCost
+        remainingPower -= applicationAmount
 
         return {
           stock,
-          strategy,
-          costPrice,
-          lotCost,
-          targetAmount,
-          maxLots: strategy.fixedLots ? Math.min(maxLots, strategy.fixedLots) : strategyMaxLots,
-          autoLots,
+          strategy: autoPlan.strategy,
+          costPrice: autoPlan.costPrice,
+          lotCost: autoPlan.lotCost,
+          targetAmount: autoPlan.targetAmount,
+          maxLots: autoPlan.maxLots,
+          autoLots: autoPlan.autoLots,
           lots,
           shares,
           applicationAmount,
-          subscriptionFee: planFee,
+          subscriptionFee: autoPlan.subscriptionFee,
+          ruleNote: autoPlan.ruleNote,
         }
       })
       const usedAmount = stockPlans.reduce((sum, plan) => sum + plan.applicationAmount, 0)
@@ -253,7 +301,7 @@ export default function IpoTemplate() {
         strategy: tierLabel(tier),
       }
     })
-  }, [accountsText, manualFees, manualLots, stocks, strategyWeightTotal, tiers])
+  }, [accountsText, manualFees, manualLots, stocks, tiers])
 
   const stockTotals = stocks.map(stock => {
     const plans = rows.map(row => row.stockPlans.find(plan => plan.stock.id === stock.id)).filter(Boolean)
@@ -307,6 +355,7 @@ export default function IpoTemplate() {
         target_amount: plan.targetAmount,
         leverage: row.leverage,
         strategy: `${row.strategy}；大致策略：${plan.strategy.label}`,
+        allocation_rule: plan.ruleNote,
       }
     })
     const planTotal = stockTotals.find(item => item.stock.id === stock.id)
@@ -383,7 +432,7 @@ export default function IpoTemplate() {
         <div>
           <h1 className="text-2xl font-bold">IPO 打新模板</h1>
           <p className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>
-            同一账户资金可拆成三只股票，按大致策略分别计算认购手数。
+            已按本次三只新股预填：先全力打天辰，再用剩余额度打龙丰，最后打大金。
           </p>
         </div>
       </div>
@@ -392,7 +441,7 @@ export default function IpoTemplate() {
         <div className="flex flex-wrap justify-between gap-2 mb-3">
           <h2 className="font-semibold">三只股票资金规划</h2>
           <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-            直接选择全力打、重点打、68套餐、28套餐、免费餐；系统自动换算目标额度和手数。
+            天辰生物、龙丰集团、大金重工已填好发行价、每手股数和默认策略。
           </div>
         </div>
         <div className="template-stock-grid">
@@ -447,11 +496,9 @@ export default function IpoTemplate() {
           })}
         </div>
         <div className="template-rule mt-4">
-          <div>全力打：按 80%-90% 强度参与，适合最确定、最想要筹码的票。</div>
-          <div>重点打：中高强度参与，适合值得打但不需要压满的票。</div>
-          <div>68套餐：固定申购费 68，只打几手控制成本。</div>
-          <div>28套餐：固定申购费 28，只打几手控制成本。</div>
-          <div>免费餐：不计申购手续费，只打几手。</div>
+          <div>天辰生物：发行价 96.06，每手 50 股，所有账户先全力拉满。</div>
+          <div>龙丰集团：发行价 6.38，每手 500 股；天辰打完后，剩余额度 3 万以上全部打龙丰，3 万以下按 28 套餐 14 手。</div>
+          <div>大金重工：发行价 66.4，每手 100 股；龙丰后剩余额度继续打大金，默认 28 套餐 7 手，不够 7 手时先打一手。</div>
         </div>
       </section>
 
