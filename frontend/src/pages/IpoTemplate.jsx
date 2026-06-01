@@ -181,20 +181,100 @@ function parseLotOptions(text) {
   return [...new Set(options)].sort((a, b) => a - b)
 }
 
+function parseMoney(value) {
+  const parsed = Number(String(value || '').replace(/[，,]/g, ''))
+  return Number.isFinite(parsed) ? parsed : 0
+}
+
 function stockLotOptions(stock) {
   const options = parseLotOptions(stock.lotOptionsText)
   return options.length ? options : parseLotOptions(fallbackLotOptions)
 }
 
+function fallbackApplicationTiers(stock) {
+  const { lotCost } = stockCost(stock)
+  const lotShares = Number(stock.lotShares || 0)
+  return stockLotOptions(stock)
+    .map(lots => ({
+      shares: lots * lotShares,
+      lots,
+      amount: lots * lotCost,
+      source: 'estimated',
+    }))
+    .filter(tier => tier.shares > 0 && tier.lots > 0 && tier.amount > 0)
+}
+
+function parseApplicationTiers(text, stock) {
+  const lotShares = Number(stock.lotShares || 0)
+  const ipoPrice = Number(stock.ipoPrice || 0)
+  const rows = []
+
+  String(text || '')
+    .split(/\n+/)
+    .map(line => line.trim())
+    .filter(Boolean)
+    .forEach(line => {
+      const numbers = line.match(/\d[\d,，]*(?:\.\d+)?/g)?.map(parseMoney).filter(Boolean) || []
+      for (let index = 0; index < numbers.length - 1; index += 1) {
+        const shares = numbers[index]
+        const amount = numbers[index + 1]
+        const looksLikeShareCount = lotShares > 0 && shares >= lotShares && shares % lotShares === 0
+        const looksLikeApplicationAmount = ipoPrice > 0 ? amount >= shares * ipoPrice * 0.8 : amount > shares
+        if (looksLikeShareCount && looksLikeApplicationAmount) {
+          rows.push({
+            shares,
+            lots: shares / lotShares,
+            amount,
+            source: 'prospectus',
+          })
+          index += 1
+        }
+      }
+    })
+
+  const deduped = new Map()
+  rows.forEach(row => {
+    const previous = deduped.get(row.shares)
+    if (!previous || row.amount < previous.amount) deduped.set(row.shares, row)
+  })
+  return [...deduped.values()].sort((a, b) => a.amount - b.amount)
+}
+
+function stockApplicationTiers(stock) {
+  const parsed = parseApplicationTiers(stock.applicationTiersText, stock)
+  return parsed.length ? parsed : fallbackApplicationTiers(stock)
+}
+
+function applicationTierText(stock) {
+  if (stock.applicationTiersText) return stock.applicationTiersText
+  return fallbackApplicationTiers(stock)
+    .map(tier => `${fmt(tier.shares, 0)} ${fmt(tier.amount, 2)}`)
+    .join('\n')
+}
+
+function stockTierByLots(stock, lots) {
+  const parsed = Number(lots || 0)
+  return stockApplicationTiers(stock).find(tier => tier.lots === parsed)
+}
+
 function matchAllowedLotCount(value, stock) {
-  const options = stockLotOptions(stock)
+  const options = stockApplicationTiers(stock).map(tier => tier.lots)
   const parsed = Math.floor(Number(value || 0))
   if (!Number.isFinite(parsed) || parsed <= 0) return 0
   return [...options].reverse().find(lots => lots <= parsed) || 0
 }
 
+function matchAffordableLotCount(budgetAmount, stock, maxLots = Infinity) {
+  const budget = Number(budgetAmount || 0)
+  if (!Number.isFinite(budget) || budget <= 0) return 0
+  const tier = [...stockApplicationTiers(stock)]
+    .reverse()
+    .find(item => item.amount <= budget && item.lots <= maxLots)
+  return tier?.lots || 0
+}
+
 function adjacentAllowedLotCount(current, direction, stock) {
-  const options = stockLotOptions(stock)
+  const options = stockApplicationTiers(stock).map(tier => tier.lots)
   const fallback = matchAllowedLotCount(current, stock)
   const index = options.findIndex(lots => lots === fallback)
   if (index < 0) return direction > 0 ? options[0] : 0
@@ -240,47 +320,50 @@ function planByRule(stock, remainingCash, accountFee, leverage = 1, reserveCash 
   const activeLeverage = clampLeverage(leverage)
   const availableCash = Math.max(0, remainingCash - reserveCash)
   const remainingPower = availableCash * activeLeverage
-  const affordableLots = lotCost > 0 ? Math.floor(remainingPower / lotCost) : 0
+  const affordableLots = matchAffordableLotCount(remainingPower, stock)
   const fallbackFee = strategy.fixedFee === undefined ? accountFee : strategy.fixedFee
   let targetAmount = remainingPower
   let maxLots = affordableLots
-  let autoLots = matchAllowedLotCount(affordableLots, stock)
+  let autoLots = matchAffordableLotCount(remainingPower, stock, affordableLots)
   let subscriptionFee = fallbackFee
   let ruleNote = strategy.desc
 
   if (stock.rule === 'tianchen_full') {
     targetAmount = remainingPower * (strategy.weight / 100)
-    maxLots = lotCost > 0 ? Math.floor(targetAmount / lotCost) : 0
-    autoLots = matchAllowedLotCount(maxLots, stock)
+    maxLots = matchAffordableLotCount(targetAmount, stock)
+    autoLots = matchAffordableLotCount(targetAmount, stock, maxLots)
     subscriptionFee = accountFee
-    ruleNote = '全力打按85%左右资金匹配本股票合法手数档位'
+    ruleNote = '全力打按85%左右资金匹配本股票招股书合法档位'
   } else if (stock.rule === 'longfeng_after_tianchen') {
     if (remainingCash >= 30000) {
-      autoLots = matchAllowedLotCount(affordableLots, stock)
+      autoLots = matchAffordableLotCount(remainingPower, stock)
       subscriptionFee = accountFee
-      ruleNote = '天辰打完后，剩余现金3万以上全部打龙丰'
+      ruleNote = '天辰打完后，剩余现金3万以上按招股书档位全部打龙丰'
     } else {
       const fee28Lots = 14
-      targetAmount = Math.min(fee28Lots * lotCost, remainingPower)
+      const fee28Tier = stockTierByLots(stock, fee28Lots)
+      targetAmount = Math.min(fee28Tier?.amount || fee28Lots * lotCost, remainingPower)
       maxLots = Math.min(fee28Lots, affordableLots)
-      autoLots = matchAllowedLotCount(maxLots, stock)
+      autoLots = matchAffordableLotCount(remainingPower, stock, maxLots)
       subscriptionFee = autoLots > 0 ? 28 : 0
-      ruleNote = '天辰打完后，剩余现金3万以下按28套餐，最多14手'
+      ruleNote = '天辰打完后，剩余现金3万以下按28套餐，最多14手，并落到招股书合法档位'
     }
   } else if (stock.rule === 'dajin_remaining') {
-    const sevenLotsCost = 7 * lotCost
-    if (remainingPower >= sevenLotsCost) {
+    const sevenLotsTier = stockTierByLots(stock, 7)
+    const sevenLotsCost = sevenLotsTier?.amount || 7 * lotCost
+    if (matchAffordableLotCount(remainingPower, stock, 7) >= 7) {
       targetAmount = sevenLotsCost
       maxLots = Math.min(7, affordableLots)
-      autoLots = matchAllowedLotCount(maxLots, stock)
+      autoLots = matchAffordableLotCount(remainingPower, stock, maxLots)
       subscriptionFee = 28
-      ruleNote = '剩余额度按大金28套餐7手'
+      ruleNote = '剩余额度按大金28套餐7手，并使用招股书档位金额'
     } else {
-      targetAmount = lotCost
+      const oneLotTier = stockTierByLots(stock, 1)
+      targetAmount = oneLotTier?.amount || lotCost
       maxLots = affordableLots >= 1 ? 1 : 0
-      autoLots = matchAllowedLotCount(maxLots, stock)
+      autoLots = matchAffordableLotCount(remainingPower, stock, maxLots)
       subscriptionFee = 0
-      ruleNote = '剩余额度不足7手时，大金先打一手'
+      ruleNote = '剩余额度不足7手时，大金先打一手，按招股书档位金额计算'
     }
   }
 
@@ -392,13 +475,15 @@ export default function IpoTemplate() {
         const planKey = makeManualKey({ accountKey }, stock)
         const manualLotsValue = manualLots[planKey]
         const lots = matchAllowedLotCount(Math.min(manualLotsValue ?? autoPlan.autoLots, autoPlan.maxLots), stock)
-        const shares = lots * Number(stock.lotShares || 0)
-        const applicationAmount = lots * autoPlan.lotCost
+        const applicationTier = stockTierByLots(stock, lots)
+        const shares = applicationTier?.shares || lots * Number(stock.lotShares || 0)
+        const applicationAmount = applicationTier?.amount || lots * autoPlan.lotCost
         const cashAmount = leverage > 0 ? applicationAmount / leverage : applicationAmount
-        remainingCash -= cashAmount
+        remainingCash = Math.max(0, remainingCash - cashAmount)
 
         return {
           stock,
+          applicationTier,
           strategy: autoPlan.strategy,
           costPrice: autoPlan.costPrice,
           lotCost: autoPlan.lotCost,
@@ -481,6 +566,8 @@ export default function IpoTemplate() {
         ipo_profit: -plan.subscriptionFee,
         application_amount: plan.applicationAmount,
         target_amount: plan.targetAmount,
+        prospectus_tier_shares: plan.applicationTier?.shares || plan.shares,
+        prospectus_tier_amount: plan.applicationTier?.amount || plan.applicationAmount,
         leverage: row.leverage,
         strategy: `${row.strategy}；大致策略：${plan.strategy.label}`,
         allocation_rule: plan.ruleNote,
@@ -503,6 +590,7 @@ export default function IpoTemplate() {
         settlement_fee: 2,
         transaction_tax: 3,
       },
+      application_tiers: stockApplicationTiers(stock),
       tiers,
       applications,
       summary: {
@@ -613,15 +701,19 @@ export default function IpoTemplate() {
                     <input value={fmt(lotCost, 2)} readOnly />
                   </label>
                   <label className="template-field col-span-2">
-                    <span>申购手数档位</span>
-                    <input
-                      value={stock.lotOptionsText || ''}
-                      onChange={e => updateStock(index, 'lotOptionsText', e.target.value)}
-                      placeholder="例如：1,2,3,4,5,10,20,40,100,200,400"
+                    <span>招股书档位表（股份数 / 应付金额）</span>
+                    <textarea
+                      className="template-tier-textarea"
+                      value={applicationTierText(stock)}
+                      onChange={e => updateStock(index, 'applicationTiersText', e.target.value)}
+                      spellCheck={false}
+                      placeholder={'例如：\n200 19,405.85\n400 38,811.70'}
                     />
                   </label>
                 </div>
-                <div className="template-strategy-desc">{stockStrategy(stock).desc}</div>
+                <div className="template-strategy-desc">
+                  {stockStrategy(stock).desc}；已识别 {stockApplicationTiers(stock).length} 个招股书档位。
+                </div>
                 <div className="template-stock-stats">
                   <span>目标资金 {fmt(total?.targetAmount || 0, 0)}</span>
                   <span>占用资金 {fmt(total?.cashAmount || 0, 0)}</span>
@@ -657,7 +749,7 @@ export default function IpoTemplate() {
           <h2 className="font-semibold mb-3">成本规则</h2>
           <div className="template-rule">
             <div>成本价 = IPO 价格 × 1.01</div>
-            <div>每行认购手数都可手动调整；调整后同步重算每只股票申请金额。</div>
+            <div>每行认购手数只能落到招股书档位表里存在的档位；调整后按该档位的“应付金额”重算申请金额。</div>
             <div>全力打、重点打沿用账户手续费档位；68套餐、28套餐、免费餐分别按固定费用计算。</div>
             <div>卖出佣金 75 元、结算费 2 元、交易税 3 元，仅中签账户产生；未中签账户不计这些卖出费用。</div>
           </div>
@@ -805,6 +897,9 @@ export default function IpoTemplate() {
                           <input type="number" value={plan.lots} onChange={e => setManualRowLots(row, plan, e.target.value)} />
                           <button type="button" onClick={() => stepManualRowLots(row, plan, 1)}>+</button>
                           <button type="button" className="template-lot-reset" onClick={() => resetManualRowLots(row, plan)}>自动</button>
+                        </div>
+                        <div className="text-[11px] mt-1" style={{ color: 'var(--text-muted)' }}>
+                          {fmt(plan.shares, 0)} 股 / 档位 {fmt(plan.applicationAmount, 2)}
                         </div>
                       </td>
                       <td className="px-2 py-1.5">{fmt(plan.cashAmount, 0)}</td>
