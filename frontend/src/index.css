@@ -209,6 +209,66 @@ body {
   padding-top: 10px;
 }
 
+.template-stock-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 10px;
+}
+
+.template-stock-card {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-secondary);
+  padding: 10px;
+}
+
+.template-stock-card-title {
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.template-stock-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 10px;
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.template-stock-stats span {
+  min-width: 0;
+  border: 1px solid var(--border-soft);
+  border-radius: 4px;
+  background: var(--bg-primary);
+  padding: 6px;
+  line-height: 1.35;
+}
+
+.template-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 8px;
+}
+
+.template-summary-item {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.7;
+  padding: 10px;
+}
+
+.template-summary-name {
+  color: var(--text-primary);
+  font-weight: 700;
+  margin-bottom: 3px;
+}
+
 .template-table-input {
   min-width: 96px;
   height: 26px;
