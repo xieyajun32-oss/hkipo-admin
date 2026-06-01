@@ -95,21 +95,38 @@ const stockStrategies = {
   free: { label: '免费餐', weight: 12, capLots: 5, fixedFee: 0, desc: '免费餐，不计申购手续费，只打几手' },
 }
 const defaultStocks = [
-  { id: 'stock-a', name: '天辰生物', code: '1779', lotShares: 50, ipoPrice: 96.06, strategy: 'full', rule: 'tianchen_full' },
-  { id: 'stock-b', name: '龙丰集团', code: '2290', lotShares: 500, ipoPrice: 6.38, strategy: 'focus', rule: 'longfeng_after_tianchen' },
-  { id: 'stock-c', name: '大金重工', code: '1081', lotShares: 100, ipoPrice: 66.4, strategy: 'fee28', rule: 'dajin_remaining' },
+  {
+    id: 'stock-a',
+    name: '天辰生物',
+    code: '1779',
+    lotShares: 50,
+    ipoPrice: 96.06,
+    strategy: 'full',
+    rule: 'tianchen_full',
+    lotOptionsText: '1,2,3,4,5,6,7,8,9,10,20,40,60,80,100,200,400,600,800,1000,2000,3000',
+  },
+  {
+    id: 'stock-b',
+    name: '龙丰集团',
+    code: '2290',
+    lotShares: 500,
+    ipoPrice: 6.38,
+    strategy: 'focus',
+    rule: 'longfeng_after_tianchen',
+    lotOptionsText: '1,2,3,4,5,6,7,8,9,10,14,15,20,25,30,35,40,45,50,60,70,80,90,100,200,300,400,500,600,700,800,900,1000',
+  },
+  {
+    id: 'stock-c',
+    name: '大金重工',
+    code: '1081',
+    lotShares: 100,
+    ipoPrice: 66.4,
+    strategy: 'fee28',
+    rule: 'dajin_remaining',
+    lotOptionsText: '1,7,14,20,30,40,50,60,80,100,200,400,600,800,1000',
+  },
 ]
-const allowedLotCounts = [
-  ...Array.from({ length: 10 }, (_, index) => index + 1),
-  14,
-  15,
-  20,
-  ...Array.from({ length: 16 }, (_, index) => 25 + index * 5),
-  ...Array.from({ length: 10 }, (_, index) => 200 + index * 100),
-  2000,
-  3000,
-  43483,
-]
+const fallbackLotOptions = '1,2,3,4,5,6,7,8,9,10,20,40,60,80,100,200,400,600,800,1000'
 
 function fmt(value, digits = 2) {
   if (value === null || value === undefined || Number.isNaN(value)) return '-'
@@ -156,17 +173,32 @@ function matchTier(capital, tiers) {
   return sorted.find(tier => capital >= Number(tier.threshold || 0)) || sorted.at(-1) || defaultTiers.at(-1)
 }
 
-function matchAllowedLotCount(value) {
-  const parsed = Math.floor(Number(value || 0))
-  if (!Number.isFinite(parsed) || parsed <= 0) return 0
-  return [...allowedLotCounts].reverse().find(lots => lots <= parsed) || 0
+function parseLotOptions(text) {
+  const options = String(text || fallbackLotOptions)
+    .split(/[,，\s]+/)
+    .map(item => Number(item))
+    .filter(item => Number.isFinite(item) && item > 0)
+  return [...new Set(options)].sort((a, b) => a - b)
 }
 
-function adjacentAllowedLotCount(current, direction) {
-  const fallback = matchAllowedLotCount(current)
-  const index = allowedLotCounts.findIndex(lots => lots === fallback)
-  if (index < 0) return direction > 0 ? allowedLotCounts[0] : 0
-  return allowedLotCounts[Math.max(0, Math.min(allowedLotCounts.length - 1, index + direction))]
+function stockLotOptions(stock) {
+  const options = parseLotOptions(stock.lotOptionsText)
+  return options.length ? options : parseLotOptions(fallbackLotOptions)
+}
+
+function matchAllowedLotCount(value, stock) {
+  const options = stockLotOptions(stock)
+  const parsed = Math.floor(Number(value || 0))
+  if (!Number.isFinite(parsed) || parsed <= 0) return 0
+  return [...options].reverse().find(lots => lots <= parsed) || 0
+}
+
+function adjacentAllowedLotCount(current, direction, stock) {
+  const options = stockLotOptions(stock)
+  const fallback = matchAllowedLotCount(current, stock)
+  const index = options.findIndex(lots => lots === fallback)
+  if (index < 0) return direction > 0 ? options[0] : 0
+  return options[Math.max(0, Math.min(options.length - 1, index + direction))]
 }
 
 function stockCost(stock) {
@@ -202,28 +234,36 @@ function extractStockConfig(text, fallback) {
   }
 }
 
-function planByRule(stock, remainingPower, accountFee, leverage = 1) {
+function planByRule(stock, remainingCash, accountFee, leverage = 1, reserveCash = 0) {
   const strategy = stockStrategy(stock)
   const { costPrice, lotCost } = stockCost(stock)
+  const activeLeverage = clampLeverage(leverage)
+  const availableCash = Math.max(0, remainingCash - reserveCash)
+  const remainingPower = availableCash * activeLeverage
   const affordableLots = lotCost > 0 ? Math.floor(remainingPower / lotCost) : 0
-  const remainingCash = remainingPower / clampLeverage(leverage)
   const fallbackFee = strategy.fixedFee === undefined ? accountFee : strategy.fixedFee
   let targetAmount = remainingPower
   let maxLots = affordableLots
-  let autoLots = matchAllowedLotCount(affordableLots)
+  let autoLots = matchAllowedLotCount(affordableLots, stock)
   let subscriptionFee = fallbackFee
   let ruleNote = strategy.desc
 
-  if (stock.rule === 'longfeng_after_tianchen') {
+  if (stock.rule === 'tianchen_full') {
+    targetAmount = remainingPower * (strategy.weight / 100)
+    maxLots = lotCost > 0 ? Math.floor(targetAmount / lotCost) : 0
+    autoLots = matchAllowedLotCount(maxLots, stock)
+    subscriptionFee = accountFee
+    ruleNote = '全力打按85%左右资金匹配本股票合法手数档位'
+  } else if (stock.rule === 'longfeng_after_tianchen') {
     if (remainingCash >= 30000) {
-      autoLots = matchAllowedLotCount(affordableLots)
+      autoLots = matchAllowedLotCount(affordableLots, stock)
       subscriptionFee = accountFee
       ruleNote = '天辰打完后，剩余现金3万以上全部打龙丰'
     } else {
       const fee28Lots = 14
       targetAmount = Math.min(fee28Lots * lotCost, remainingPower)
       maxLots = Math.min(fee28Lots, affordableLots)
-      autoLots = maxLots
+      autoLots = matchAllowedLotCount(maxLots, stock)
       subscriptionFee = autoLots > 0 ? 28 : 0
       ruleNote = '天辰打完后，剩余现金3万以下按28套餐，最多14手'
     }
@@ -232,13 +272,13 @@ function planByRule(stock, remainingPower, accountFee, leverage = 1) {
     if (remainingPower >= sevenLotsCost) {
       targetAmount = sevenLotsCost
       maxLots = Math.min(7, affordableLots)
-      autoLots = 7
+      autoLots = matchAllowedLotCount(maxLots, stock)
       subscriptionFee = 28
       ruleNote = '剩余额度按大金28套餐7手'
     } else {
       targetAmount = lotCost
-      maxLots = 1
-      autoLots = 1
+      maxLots = affordableLots >= 1 ? 1 : 0
+      autoLots = matchAllowedLotCount(maxLots, stock)
       subscriptionFee = 0
       ruleNote = '剩余额度不足7手时，大金先打一手'
     }
@@ -254,6 +294,14 @@ function planByRule(stock, remainingPower, accountFee, leverage = 1) {
     subscriptionFee,
     ruleNote,
   }
+}
+
+function futureReserveCash(stocks, startIndex, leverage) {
+  const activeLeverage = clampLeverage(leverage)
+  return stocks.slice(startIndex + 1).reduce((sum, stock) => {
+    if (stock.rule !== 'dajin_remaining') return sum
+    return sum + stockCost(stock).lotCost / activeLeverage
+  }, 0)
 }
 
 export default function IpoTemplate() {
@@ -284,17 +332,16 @@ export default function IpoTemplate() {
 
   const setManualRowLots = (row, stockPlan, value) => {
     const key = makeManualKey(row, stockPlan.stock)
-    const capped = Math.min(Number(value || 0), Math.max(stockPlan.maxLots, stockPlan.autoLots, stockPlan.lots, 1))
-    setManualLots(current => ({ ...current, [key]: matchAllowedLotCount(capped) }))
+    const capped = Math.min(Number(value || 0), stockPlan.maxLots)
+    setManualLots(current => ({ ...current, [key]: matchAllowedLotCount(capped, stockPlan.stock) }))
   }
 
   const stepManualRowLots = (row, stockPlan, direction) => {
     const key = makeManualKey(row, stockPlan.stock)
     setManualLots(current => {
       const base = current[key] ?? stockPlan.lots
-      const nextLots = adjacentAllowedLotCount(base, direction)
-      const cap = Math.max(stockPlan.maxLots, stockPlan.autoLots, stockPlan.lots, 1)
-      return { ...current, [key]: matchAllowedLotCount(Math.min(nextLots, cap)) }
+      const nextLots = adjacentAllowedLotCount(base, direction, stockPlan.stock)
+      return { ...current, [key]: matchAllowedLotCount(Math.min(nextLots, stockPlan.maxLots), stockPlan.stock) }
     })
   }
 
@@ -340,11 +387,11 @@ export default function IpoTemplate() {
       const subscriptionFee = manualFees[accountKey] ?? tierFee
       const buyingPower = row.capital * leverage
       let remainingCash = row.capital
-      const stockPlans = stocks.map(stock => {
-        const remainingPower = remainingCash * leverage
-        const autoPlan = planByRule(stock, remainingPower, subscriptionFee, leverage)
+      const stockPlans = stocks.map((stock, stockIndex) => {
+        const autoPlan = planByRule(stock, remainingCash, subscriptionFee, leverage, futureReserveCash(stocks, stockIndex, leverage))
         const planKey = makeManualKey({ accountKey }, stock)
-        const lots = manualLots[planKey] ?? autoPlan.autoLots
+        const manualLotsValue = manualLots[planKey]
+        const lots = matchAllowedLotCount(Math.min(manualLotsValue ?? autoPlan.autoLots, autoPlan.maxLots), stock)
         const shares = lots * Number(stock.lotShares || 0)
         const applicationAmount = lots * autoPlan.lotCost
         const cashAmount = leverage > 0 ? applicationAmount / leverage : applicationAmount
@@ -564,6 +611,14 @@ export default function IpoTemplate() {
                   <label className="template-field">
                     <span>每手成本</span>
                     <input value={fmt(lotCost, 2)} readOnly />
+                  </label>
+                  <label className="template-field col-span-2">
+                    <span>申购手数档位</span>
+                    <input
+                      value={stock.lotOptionsText || ''}
+                      onChange={e => updateStock(index, 'lotOptionsText', e.target.value)}
+                      placeholder="例如：1,2,3,4,5,10,20,40,100,200,400"
+                    />
                   </label>
                 </div>
                 <div className="template-strategy-desc">{stockStrategy(stock).desc}</div>
