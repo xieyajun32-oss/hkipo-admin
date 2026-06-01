@@ -208,6 +208,48 @@ body {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
 }
 
+.template-strategy-runner {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 180px;
+  gap: 10px;
+  align-items: end;
+  margin-top: 12px;
+}
+
+.template-strategy-input {
+  min-height: 86px;
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  padding: 8px;
+  outline: none;
+  resize: vertical;
+  line-height: 1.55;
+  font-size: 12px;
+}
+
+.template-strategy-input:focus {
+  border-color: var(--accent);
+}
+
+.template-run-button {
+  min-height: 38px;
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  background: var(--accent);
+  color: #1a1a1a;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0 12px;
+}
+
+.template-run-button:hover {
+  filter: brightness(1.05);
+}
+
 .template-rule {
   color: var(--text-secondary);
   font-size: 12px;
@@ -354,6 +396,16 @@ body {
 
 .template-fee-control button:hover {
   border-color: var(--accent);
+}
+
+@media (max-width: 720px) {
+  .template-strategy-runner {
+    grid-template-columns: 1fr;
+  }
+
+  .template-run-button {
+    width: 100%;
+  }
 }
 
 .brief-page-head {

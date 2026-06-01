@@ -34,7 +34,53 @@ HK030 张李磊（甲尾） 566,748
 HK031 许磊（甲尾） 590,945
 HK032 黎祥 128,603
 HK033 方金华 146,721
-HK034 陈亮 56,394`
+HK034 陈亮 56,394
+HK035 吴双枝 59,355
+HK036 彭昌啟 73,240
+HK037 严凯玲 66,281
+HK038 郑兰 64,897
+HK039 旷佳丽（乙头） 700,668
+HK040 杨家润 149,955
+HK041 郑玉俊 106,512
+HK042 旷林 478,158
+HK043 候贝贝（甲尾） 552,760
+HK044 赵术成（甲尾） 586,670
+HK046 谢惠（甲尾） 599,927
+HK047 mini（乙头） 712,551
+HK048 杨文凤（甲尾） 526,903
+HK049 许永红 64,000
+HK050 蒋国辉 54,872
+HK051 蒋佳余 106,300
+HK052 刘学花 53,600
+HK053 刘俊花 60,100
+HK054 黄秋慧 106,222
+HK055 伍玉莲 106,300
+HK056 李桂萍 107,500
+HK057 宋淼 106,200
+HK058 何小杭 110,000
+HK059 郑玉兴 107,500
+HK060 孙露聪 106,400
+HK061 吴遂中 107,422
+HK062 熊晓燕 106,272
+HK063 李琴 112,000
+HK064 郑艳虹 106,272
+HK065 彭海伦 109,972
+HK066 彭军 107,450
+HK067 周娟 10,050
+HK068 苏天树 107,372
+HK069 王太方 107,400
+HK070 何德敏 107,400
+HK071 谢崇琼 107,372
+HK072 何伟 107,450
+HK073 李陶琴 106,172
+HK074 赵波 104,100
+HK075 唐杰 112,000
+HK076 欧阳志强 107,400
+HK077 何佳临 107,372`
+
+const defaultStrategyPrompt = `天辰生物：发行价 96.06，每手 50 股，所有账户先全力拉满。
+龙丰集团：发行价 6.38，每手 500 股；天辰打完后，剩余额度 3 万以上全部打龙丰，3 万以下按 28 套餐 14 手。
+大金重工：发行价 66.4，每手 100 股；龙丰后剩余额度继续打大金，默认 28 套餐 7 手，不够 7 手时先打一手。`
 
 const feeOptions = [0, 28, 68, 88, 50, 100]
 const defaultTiers = [
@@ -139,6 +185,23 @@ function makeManualKey(row, stock) {
   return `${row.accountKey}-${stock.id}`
 }
 
+function extractStockConfig(text, fallback) {
+  const safeText = text || ''
+  const namePattern = fallback.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const blockMatch = safeText.match(new RegExp(`${namePattern}[\\s\\S]*?(?=\\n[^\\n：:]{2,20}[：:]|$)`))
+  const block = blockMatch?.[0] || safeText
+  const priceMatch = block.match(/发行价\s*([0-9]+(?:\.[0-9]+)?)/)
+  const lotMatch = block.match(/每手\s*([0-9,，]+)\s*股/)
+  const codeMatch = block.match(/(?:HK|AH)?[：:\s]*([0-9]{4,5})/)
+
+  return {
+    ...fallback,
+    code: codeMatch?.[1] || fallback.code,
+    ipoPrice: priceMatch ? Number(priceMatch[1]) : fallback.ipoPrice,
+    lotShares: lotMatch ? Number(lotMatch[1].replace(/[，,]/g, '')) : fallback.lotShares,
+  }
+}
+
 function planByRule(stock, remainingPower, accountFee) {
   const strategy = stockStrategy(stock)
   const { costPrice, lotCost } = stockCost(stock)
@@ -196,6 +259,7 @@ export default function IpoTemplate() {
   const [stocks, setStocks] = useState(defaultStocks)
   const [tiers, setTiers] = useState(defaultTiers)
   const [accountsText, setAccountsText] = useState(defaultAccounts)
+  const [strategyPrompt, setStrategyPrompt] = useState(defaultStrategyPrompt)
   const [manualLots, setManualLots] = useState({})
   const [manualFees, setManualFees] = useState({})
   const [saving, setSaving] = useState(false)
@@ -251,6 +315,16 @@ export default function IpoTemplate() {
       const next = { ...current }
       delete next[key]
       return next
+    })
+  }
+
+  const handleGenerateFromStrategy = () => {
+    setStocks(defaultStocks.map(stock => extractStockConfig(strategyPrompt, stock)))
+    setAccountsText(defaultAccounts)
+    setManualLots({})
+    setManualFees({})
+    window.requestAnimationFrame(() => {
+      document.getElementById('ipo-template-result')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
     })
   }
 
@@ -500,6 +574,20 @@ export default function IpoTemplate() {
           <div>龙丰集团：发行价 6.38，每手 500 股；天辰打完后，剩余额度 3 万以上全部打龙丰，3 万以下按 28 套餐 14 手。</div>
           <div>大金重工：发行价 66.4，每手 100 股；龙丰后剩余额度继续打大金，默认 28 套餐 7 手，不够 7 手时先打一手。</div>
         </div>
+        <div className="template-strategy-runner">
+          <label className="template-field">
+            <span>打新策略</span>
+            <textarea
+              className="template-strategy-input"
+              value={strategyPrompt}
+              onChange={e => setStrategyPrompt(e.target.value)}
+              spellCheck={false}
+            />
+          </label>
+          <button type="button" className="template-run-button" onClick={handleGenerateFromStrategy}>
+            一键启动 OpenClaw 制作表格
+          </button>
+        </div>
       </section>
 
       <div className="grid grid-cols-1 xl:grid-cols-[360px_1fr] gap-4 mt-4">
@@ -530,7 +618,7 @@ export default function IpoTemplate() {
         </section>
       </div>
 
-      <section className="template-panel mt-4">
+      <section id="ipo-template-result" className="template-panel mt-4">
         <div className="flex flex-wrap justify-between gap-2 mb-3">
           <h2 className="font-semibold">资金分界与手续费标准</h2>
           <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>
