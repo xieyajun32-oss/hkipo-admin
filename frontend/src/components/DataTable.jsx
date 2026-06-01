@@ -1,11 +1,15 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 
-export default function DataTable({ columns, data, onEdit, onDelete, searchField, wide = false, summaryRow }) {
+export default function DataTable({ columns, data, onEdit, onDelete, searchField, wide = false, summaryRow, tableMinWidth }) {
   const [search, setSearch] = useState('')
   const topScrollRef = useRef(null)
   const tableScrollRef = useRef(null)
   const hasActions = Boolean(onEdit || onDelete)
-  const tableMinWidth = wide ? 3000 : undefined
+  const resolvedTableMinWidth = useMemo(() => {
+    if (tableMinWidth) return tableMinWidth
+    if (!wide) return 'max-content'
+    return 3000
+  }, [tableMinWidth, wide])
   
   const filtered = search && searchField
     ? data.filter(row => String(row[searchField] || '').toLowerCase().includes(search.toLowerCase()))
@@ -44,17 +48,36 @@ export default function DataTable({ columns, data, onEdit, onDelete, searchField
       )}
       {wide && (
         <div ref={topScrollRef} className="top-scrollbar">
-          <div className="top-scrollbar-inner" style={{ width: tableMinWidth }} />
+          <div className="top-scrollbar-inner" style={{ width: resolvedTableMinWidth }} />
         </div>
       )}
       <div ref={tableScrollRef} className="overflow-x-auto rounded-lg border" style={{borderColor: 'var(--border)'}}>
-        <table className={`w-full text-xs ${wide ? 'min-w-[3000px]' : 'min-w-max'}`}>
+        <table className="w-full text-xs border-collapse" style={{ minWidth: resolvedTableMinWidth }}>
           <thead>
             <tr style={{background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border)'}}>
               {columns.map(col => (
-                <th key={col.key} className={`${wide ? 'px-2' : 'px-3'} text-left py-2 font-medium whitespace-nowrap`} style={{color: 'var(--text-secondary)'}}>{col.label}</th>
+                <th
+                  key={col.key}
+                  className={`${wide ? 'px-2' : 'px-3'} sticky top-0 z-10 text-left py-2 font-medium whitespace-nowrap`}
+                  style={{
+                    color: 'var(--text-secondary)',
+                    background: 'var(--bg-secondary)',
+                    width: col.width,
+                    minWidth: col.width,
+                    maxWidth: col.width,
+                  }}
+                >
+                  {col.label}
+                </th>
               ))}
-              {hasActions && <th className={`${wide ? 'px-2' : 'px-3'} py-2 text-right font-medium whitespace-nowrap`} style={{color: 'var(--text-secondary)'}}>操作</th>}
+              {hasActions && (
+                <th
+                  className={`${wide ? 'px-2' : 'px-3'} sticky top-0 z-10 py-2 text-right font-medium whitespace-nowrap`}
+                  style={{color: 'var(--text-secondary)', background: 'var(--bg-secondary)'}}
+                >
+                  操作
+                </th>
+              )}
             </tr>
           </thead>
           <tbody>
@@ -63,7 +86,12 @@ export default function DataTable({ columns, data, onEdit, onDelete, searchField
                 onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
                 {columns.map(col => (
-                  <td key={col.key} className={`${wide ? 'px-2' : 'px-3'} py-1.5 whitespace-nowrap`} style={{color: 'var(--text-primary)'}}>
+                  <td
+                    key={col.key}
+                    className={`${wide ? 'px-2' : 'px-3'} py-1.5 whitespace-nowrap overflow-hidden text-ellipsis`}
+                    style={{color: 'var(--text-primary)', maxWidth: col.width}}
+                    title={col.render ? String(col.render(row[col.key], row) ?? '') : String(row[col.key] || '')}
+                  >
                     {col.render ? col.render(row[col.key], row) : (row[col.key] || '-')}
                   </td>
                 ))}

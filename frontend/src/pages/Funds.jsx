@@ -69,21 +69,23 @@ function rowFundTotal(row) {
 }
 
 const fundColumns = [
-  { key: 'code', label: '编号', render: (_, row) => infoValue(row, '编号', 'id') },
-  { key: 'phone_code', label: '手机编号', render: (_, row) => infoValue(row, '手机编号') },
-  { key: 'person', label: '人员', render: (_, row) => infoValue(row, '姓名', 'name') },
+  { key: 'code', label: '编号', width: 72, render: (_, row) => infoValue(row, '编号', 'id') },
+  { key: 'phone_code', label: '手机编号', width: 88, render: (_, row) => infoValue(row, '手机编号') },
+  { key: 'person', label: '人员', width: 96, render: (_, row) => infoValue(row, '姓名', 'name') },
   ...brokerFundColumns.map(name => ({
     key: `broker_${name}`,
     label: name,
+    width: 82,
     render: (_, row) => compactText(fundValue(row, name)),
   })),
   ...bankFundColumns.map(name => ({
     key: `bank_${name}`,
     label: name,
+    width: 82,
     render: (_, row) => compactText(fundValue(row, name)),
   })),
-  { key: 'total', label: '合计', render: (_, row) => formatMoney(rowFundTotal(row)) },
-  { key: 'fund_note', label: '备注', render: (_, row) => compactText(extractInfoData(row)['资金备注'] || extractInfoData(row)['备注']) },
+  { key: 'total', label: '合计', width: 108, render: (_, row) => formatMoney(rowFundTotal(row)) },
+  { key: 'fund_note', label: '备注', width: 140, render: (_, row) => compactText(extractInfoData(row)['资金备注'] || extractInfoData(row)['备注']) },
 ]
 
 function fundSummary(rows) {
@@ -117,7 +119,7 @@ export default function Funds() {
       <div className="mb-4">
         <h1 className="text-2xl font-bold">资金总表</h1>
       </div>
-      <DataTable columns={fundColumns} data={data} searchField="name" wide summaryRow={fundSummary} />
+      <DataTable columns={fundColumns} data={data} searchField="name" wide tableMinWidth={1200} summaryRow={fundSummary} />
     </div>
   )
 }
