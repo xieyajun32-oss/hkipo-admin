@@ -5,6 +5,9 @@ export default function DataTable({ columns, data, onEdit, onDelete, searchField
   const topScrollRef = useRef(null)
   const tableScrollRef = useRef(null)
   const hasActions = Boolean(onEdit || onDelete)
+  const hasToolbar = Boolean(searchField || wide)
+  const toolbarHeight = searchField && wide ? 58 : searchField ? 42 : wide ? 18 : 0
+  const tableMaxHeight = `calc(100vh - var(--admin-nav-height) - var(--admin-page-head-height) - ${toolbarHeight}px - 30px)`
   const resolvedTableMinWidth = useMemo(() => {
     if (tableMinWidth) return tableMinWidth
     if (!wide) return 'max-content'
@@ -41,17 +44,21 @@ export default function DataTable({ columns, data, onEdit, onDelete, searchField
 
   return (
     <div>
-      {searchField && (
-        <input type="text" placeholder="🔍 搜索..." value={search} onChange={e => setSearch(e.target.value)}
-          className="rounded-md px-3 py-1.5 text-xs mb-2 w-60 outline-none"
-          style={{background: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-primary)'}} />
-      )}
-      {wide && (
-        <div ref={topScrollRef} className="top-scrollbar">
-          <div className="top-scrollbar-inner" style={{ width: resolvedTableMinWidth }} />
+      {hasToolbar && (
+        <div className="data-table-toolbar" style={{ top: 'calc(var(--admin-nav-height) + var(--admin-page-head-height))' }}>
+          {searchField && (
+            <input type="text" placeholder="🔍 搜索..." value={search} onChange={e => setSearch(e.target.value)}
+              className="rounded-md px-3 py-1.5 text-xs mb-2 w-60 outline-none"
+              style={{background: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-primary)'}} />
+          )}
+          {wide && (
+            <div ref={topScrollRef} className="top-scrollbar">
+              <div className="top-scrollbar-inner" style={{ width: resolvedTableMinWidth }} />
+            </div>
+          )}
         </div>
       )}
-      <div ref={tableScrollRef} className="overflow-x-auto rounded-lg border" style={{borderColor: 'var(--border)'}}>
+      <div ref={tableScrollRef} className="overflow-auto rounded-lg border" style={{borderColor: 'var(--border)', maxHeight: tableMaxHeight}}>
         <table className="w-full text-xs border-collapse" style={{ minWidth: resolvedTableMinWidth }}>
           <thead>
             <tr style={{background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border)'}}>
@@ -62,6 +69,7 @@ export default function DataTable({ columns, data, onEdit, onDelete, searchField
                   style={{
                     color: 'var(--text-secondary)',
                     background: 'var(--bg-secondary)',
+                    top: 0,
                     width: col.width,
                     minWidth: col.width,
                     maxWidth: col.width,
@@ -73,7 +81,7 @@ export default function DataTable({ columns, data, onEdit, onDelete, searchField
               {hasActions && (
                 <th
                   className={`${wide ? 'px-2' : 'px-3'} sticky top-0 z-10 py-2 text-right font-medium whitespace-nowrap`}
-                  style={{color: 'var(--text-secondary)', background: 'var(--bg-secondary)'}}
+                  style={{color: 'var(--text-secondary)', background: 'var(--bg-secondary)', top: 0}}
                 >
                   操作
                 </th>

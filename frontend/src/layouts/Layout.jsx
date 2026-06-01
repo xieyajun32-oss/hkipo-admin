@@ -22,7 +22,7 @@ export default function Layout() {
   return (
     <div className="admin-compact min-h-screen" style={{background: 'var(--bg-primary)'}}>
       {/* Top nav bar */}
-      <header className="border-b" style={{borderColor: 'var(--border)', background: 'var(--bg-secondary)'}}>
+      <header className="admin-top-nav border-b" style={{borderColor: 'var(--border)', background: 'var(--bg-secondary)'}}>
         <div className="w-full mx-auto px-3 h-11 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <span className="text-sm font-bold whitespace-nowrap" style={{color: 'var(--accent)'}}>🏠 港股管理后台</span>

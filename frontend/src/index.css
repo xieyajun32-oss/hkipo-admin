@@ -3,6 +3,8 @@
 @tailwind utilities;
 
 :root {
+  --admin-nav-height: 45px;
+  --admin-page-head-height: 58px;
   --bg-primary: #1a1a1a;
   --bg-secondary: #242424;
   --bg-card: #2a2a2a;
@@ -33,6 +35,31 @@ body {
 
 .admin-compact {
   font-size: 13px;
+}
+
+.admin-top-nav {
+  position: sticky;
+  top: 0;
+  z-index: 60;
+}
+
+.admin-page-head {
+  position: sticky;
+  top: var(--admin-nav-height);
+  z-index: 50;
+  min-height: var(--admin-page-head-height);
+  margin: -16px -12px 12px;
+  padding: 16px 12px 12px;
+  background: var(--bg-primary);
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.data-table-toolbar {
+  position: sticky;
+  z-index: 45;
+  margin: 0 -1px 0;
+  padding-bottom: 2px;
+  background: var(--bg-primary);
 }
 
 .admin-compact h1 {

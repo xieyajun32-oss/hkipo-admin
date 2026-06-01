@@ -187,19 +187,25 @@ function BankInfoTable({ data }) {
 
   return (
     <div>
-      <input
-        type="text"
-        placeholder="搜索手机编号、姓名、银行信息..."
-        value={search}
-        onChange={e => setSearch(e.target.value)}
-        className="rounded-md px-3 py-1.5 text-xs mb-2 w-full max-w-sm outline-none"
-        style={{ background: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
-      />
+      <div className="data-table-toolbar" style={{ top: 'calc(var(--admin-nav-height) + var(--admin-page-head-height))' }}>
+        <input
+          type="text"
+          placeholder="搜索手机编号、姓名、银行信息..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          className="rounded-md px-3 py-1.5 text-xs mb-2 w-full max-w-sm outline-none"
+          style={{ background: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
+        />
 
-      <div ref={topScrollRef} className="top-scrollbar">
-        <div className="top-scrollbar-inner" style={{ width: 3600 }} />
+        <div ref={topScrollRef} className="top-scrollbar">
+          <div className="top-scrollbar-inner" style={{ width: 3600 }} />
+        </div>
       </div>
-      <div ref={tableScrollRef} className="overflow-x-auto rounded-lg border" style={{ borderColor: 'var(--border)' }}>
+      <div
+        ref={tableScrollRef}
+        className="overflow-auto rounded-lg border"
+        style={{ borderColor: 'var(--border)', maxHeight: 'calc(100vh - var(--admin-nav-height) - var(--admin-page-head-height) - 88px)' }}
+      >
         <table className="w-full min-w-[3600px] border-collapse text-xs">
           <thead>
             <tr style={{ background: 'var(--bg-secondary)' }}>
@@ -207,8 +213,8 @@ function BankInfoTable({ data }) {
                 <th
                   key={column.key}
                   rowSpan={2}
-                  className="border px-2 py-2 text-center font-semibold whitespace-nowrap"
-                  style={{ ...columnWidth(column), borderColor: 'var(--border)', color: 'var(--text-primary)' }}
+                  className="sticky z-30 border px-2 py-2 text-center font-semibold whitespace-nowrap"
+                  style={{ ...columnWidth(column), top: 0, background: 'var(--bg-secondary)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}
                 >
                   {column.label}
                 </th>
@@ -217,8 +223,8 @@ function BankInfoTable({ data }) {
                 <th
                   key={group.name}
                   colSpan={group.columns.length}
-                  className="border px-2 py-1.5 text-center font-semibold whitespace-nowrap"
-                  style={{ borderColor: 'var(--border)', color: 'var(--text-primary)' }}
+                  className="sticky z-30 border px-2 py-1.5 text-center font-semibold whitespace-nowrap"
+                  style={{ top: 0, background: 'var(--bg-secondary)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}
                 >
                   {group.name}
                 </th>
@@ -229,8 +235,8 @@ function BankInfoTable({ data }) {
                 group.columns.map(column => (
                   <th
                     key={`${group.name}-${column.key}`}
-                    className="border px-2 py-1.5 text-center font-medium whitespace-nowrap"
-                    style={{ ...columnWidth(column), borderColor: 'var(--border)', color: 'var(--text-secondary)' }}
+                    className="sticky z-30 border px-2 py-1.5 text-center font-medium whitespace-nowrap"
+                    style={{ ...columnWidth(column), top: 34, background: 'var(--bg-secondary)', borderColor: 'var(--border)', color: 'var(--text-secondary)' }}
                   >
                     <span className="block">{column.label}</span>
                     {column.hint && <span className="mt-0.5 block text-[11px]" style={{ color: 'var(--text-muted)' }}>{column.hint}</span>}
@@ -291,7 +297,7 @@ export default function BankCards() {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-3">
+      <div className="admin-page-head flex justify-between items-center mb-3">
         <h1 className="text-2xl font-bold">银行信息</h1>
       </div>
       <BankInfoTable data={data} />

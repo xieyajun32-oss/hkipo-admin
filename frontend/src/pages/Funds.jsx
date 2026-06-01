@@ -116,7 +116,7 @@ export default function Funds() {
 
   return (
     <div>
-      <div className="mb-4">
+      <div className="admin-page-head mb-4">
         <h1 className="text-2xl font-bold">资金总表</h1>
       </div>
       <DataTable columns={fundColumns} data={data} searchField="name" wide tableMinWidth={1200} summaryRow={fundSummary} />

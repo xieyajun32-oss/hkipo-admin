@@ -40,7 +40,7 @@ export default function Brokers() {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-4">
+      <div className="admin-page-head flex justify-between items-center mb-4">
         <h1 className="text-2xl font-bold">券商管理</h1>
         <button onClick={() => setModal({})} className="px-4 py-2 rounded-lg text-sm font-medium" style={{background: "var(--accent)", color: "#1a1a1a"}}>+ 添加</button>
       </div>
