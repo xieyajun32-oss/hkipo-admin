@@ -305,7 +305,7 @@ export default function IpoTemplate() {
         application_amount: plan.applicationAmount,
         target_amount: plan.targetAmount,
         leverage: row.leverage,
-        strategy: `${row.strategy}；大智策略：${plan.strategy.label}`,
+        strategy: `${row.strategy}；大致策略：${plan.strategy.label}`,
       }
     })
     const planTotal = stockTotals.find(item => item.stock.id === stock.id)
@@ -382,7 +382,7 @@ export default function IpoTemplate() {
         <div>
           <h1 className="text-2xl font-bold">IPO 打新模板</h1>
           <p className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>
-            同一账户资金可拆成三只股票，按大智策略分别计算认购手数。
+            同一账户资金可拆成三只股票，按大致策略分别计算认购手数。
           </p>
         </div>
       </div>
@@ -411,7 +411,7 @@ export default function IpoTemplate() {
                     <input value={stock.code} onChange={e => updateStock(index, 'code', e.target.value)} placeholder="例如：03388" />
                   </label>
                   <label className="template-field">
-                    <span>大智策略</span>
+                    <span>大致策略</span>
                     <select value={stock.strategy} onChange={e => updateStock(index, 'strategy', e.target.value)}>
                       {Object.entries(stockStrategies).map(([key, strategy]) => (
                         <option key={key} value={key}>{strategy.label}</option>
@@ -540,7 +540,7 @@ export default function IpoTemplate() {
           {stockTotals.map(item => (
             <div key={item.stock.id} className="template-summary-item">
               <div className="template-summary-name">{item.stock.name || '未命名股票'}</div>
-              <div>大智策略：{stockStrategy(item.stock).label}</div>
+              <div>大致策略：{stockStrategy(item.stock).label}</div>
               <div>目标资金：{fmt(item.targetAmount, 0)}</div>
               <div>实际申请：{fmt(item.applicationAmount, 0)}</div>
               <div>总手数：{fmt(item.lots, 0)} 手</div>
