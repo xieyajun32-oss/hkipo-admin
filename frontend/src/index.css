@@ -173,6 +173,7 @@ body {
 }
 
 .template-field input,
+.template-field select,
 .template-textarea,
 .template-table-input {
   width: 100%;
@@ -185,6 +186,7 @@ body {
 }
 
 .template-field input:focus,
+.template-field select:focus,
 .template-textarea:focus,
 .template-table-input:focus {
   border-color: var(--accent);
@@ -192,6 +194,11 @@ body {
 
 .template-field input[readonly] {
   color: var(--accent);
+}
+
+.template-field select:disabled {
+  color: var(--text-muted);
+  opacity: 0.7;
 }
 
 .template-textarea {
@@ -236,6 +243,13 @@ body {
   margin-top: 10px;
   color: var(--text-secondary);
   font-size: 11px;
+}
+
+.template-strategy-desc {
+  margin-top: 8px;
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.5;
 }
 
 .template-stock-stats span {

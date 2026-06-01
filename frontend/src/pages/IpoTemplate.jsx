@@ -41,10 +41,16 @@ const defaultTiers = [
   { threshold: 50000, leverage: 10, fee: 88 },
   { threshold: 0, leverage: 10, fee: 28 },
 ]
+const stockStrategies = {
+  full: { label: '全力打', weight: 85, desc: '80%-90%仓位，适合最确定的核心票' },
+  focus: { label: '重点打', weight: 55, desc: '中高仓位，适合值得重点参与的票' },
+  low_cost: { label: '低成本打', weight: 12, capLots: 5, desc: '辉立28套餐或免费餐，只打几手控制成本' },
+  touch_one: { label: '摸一手', weight: 1, fixedLots: 1, desc: '只摸1手，占坑观察' },
+}
 const defaultStocks = [
-  { id: 'stock-a', name: '核心票', code: '', lotShares: 100, ipoPrice: 66.4, allocation: 50 },
-  { id: 'stock-b', name: '次核心票', code: '', lotShares: 100, ipoPrice: 30, allocation: 30 },
-  { id: 'stock-c', name: '试探票', code: '', lotShares: 100, ipoPrice: 12, allocation: 20 },
+  { id: 'stock-a', name: '核心票', code: '', lotShares: 100, ipoPrice: 66.4, strategy: 'full', lowCostFee: 0 },
+  { id: 'stock-b', name: '次核心票', code: '', lotShares: 100, ipoPrice: 30, strategy: 'focus', lowCostFee: 0 },
+  { id: 'stock-c', name: '试探票', code: '', lotShares: 100, ipoPrice: 12, strategy: 'low_cost', lowCostFee: 0 },
 ]
 const allowedLotCounts = [
   ...Array.from({ length: 10 }, (_, index) => index + 1),
@@ -123,6 +129,10 @@ function stockCost(stock) {
   }
 }
 
+function stockStrategy(stock) {
+  return stockStrategies[stock.strategy] || stockStrategies.focus
+}
+
 function makeManualKey(row, stock) {
   return `${row.accountKey}-${stock.id}`
 }
@@ -136,12 +146,12 @@ export default function IpoTemplate() {
   const [manualFees, setManualFees] = useState({})
   const [saving, setSaving] = useState(false)
 
-  const allocationTotal = stocks.reduce((sum, stock) => sum + Number(stock.allocation || 0), 0) || 1
+  const strategyWeightTotal = stocks.reduce((sum, stock) => sum + stockStrategy(stock).weight, 0) || 1
 
   const updateStock = (index, key, value) => {
     setStocks(current => current.map((stock, idx) => {
       if (idx !== index) return stock
-      if (['lotShares', 'ipoPrice', 'allocation'].includes(key)) return { ...stock, [key]: Number(value) }
+      if (['lotShares', 'ipoPrice', 'lowCostFee'].includes(key)) return { ...stock, [key]: Number(value) }
       return { ...stock, [key]: value }
     }))
   }
@@ -202,24 +212,29 @@ export default function IpoTemplate() {
       const buyingPower = row.capital * leverage
       const stockPlans = stocks.map(stock => {
         const { costPrice, lotCost } = stockCost(stock)
-        const targetAmount = buyingPower * (Number(stock.allocation || 0) / allocationTotal)
+        const strategy = stockStrategy(stock)
+        const targetAmount = buyingPower * (strategy.weight / strategyWeightTotal)
         const maxLots = lotCost > 0 ? Math.floor(targetAmount / lotCost) : 0
-        const autoLots = matchAllowedLotCount(maxLots)
+        const strategyMaxLots = strategy.capLots ? Math.min(maxLots, strategy.capLots) : maxLots
+        const autoLots = strategy.fixedLots ? (buyingPower >= lotCost ? strategy.fixedLots : 0) : matchAllowedLotCount(strategyMaxLots)
         const planKey = makeManualKey({ accountKey }, stock)
         const lots = manualLots[planKey] ?? autoLots
         const shares = lots * Number(stock.lotShares || 0)
         const applicationAmount = lots * lotCost
+        const planFee = stock.strategy === 'low_cost' ? Number(stock.lowCostFee || 0) : stock.strategy === 'touch_one' ? 0 : subscriptionFee
 
         return {
           stock,
+          strategy,
           costPrice,
           lotCost,
           targetAmount,
-          maxLots,
+          maxLots: strategy.fixedLots ? Math.min(maxLots, strategy.fixedLots) : strategyMaxLots,
           autoLots,
           lots,
           shares,
           applicationAmount,
+          subscriptionFee: planFee,
         }
       })
       const usedAmount = stockPlans.reduce((sum, plan) => sum + plan.applicationAmount, 0)
@@ -237,7 +252,7 @@ export default function IpoTemplate() {
         strategy: tierLabel(tier),
       }
     })
-  }, [accountsText, allocationTotal, manualFees, manualLots, stocks, tiers])
+  }, [accountsText, manualFees, manualLots, stocks, strategyWeightTotal, tiers])
 
   const stockTotals = stocks.map(stock => {
     const plans = rows.map(row => row.stockPlans.find(plan => plan.stock.id === stock.id)).filter(Boolean)
@@ -247,16 +262,17 @@ export default function IpoTemplate() {
       lots: plans.reduce((sum, plan) => sum + plan.lots, 0),
       shares: plans.reduce((sum, plan) => sum + plan.shares, 0),
       applicationAmount: plans.reduce((sum, plan) => sum + plan.applicationAmount, 0),
+      subscriptionFee: plans.reduce((sum, plan) => sum + plan.subscriptionFee, 0),
     }
   })
 
+  const totalSubscriptionFee = stockTotals.reduce((sum, item) => sum + item.subscriptionFee, 0)
   const totals = rows.reduce((sum, row) => ({
     capital: sum.capital + row.capital,
     buyingPower: sum.buyingPower + row.buyingPower,
     usedAmount: sum.usedAmount + row.usedAmount,
     remainingPower: sum.remainingPower + row.remainingPower,
-    subscriptionFee: sum.subscriptionFee + row.subscriptionFee,
-  }), { capital: 0, buyingPower: 0, usedAmount: 0, remainingPower: 0, subscriptionFee: 0 })
+  }), { capital: 0, buyingPower: 0, usedAmount: 0, remainingPower: 0 })
 
   const buildIpoNotes = (stock) => {
     const { costPrice, lotCost } = stockCost(stock)
@@ -272,24 +288,24 @@ export default function IpoTemplate() {
         shares_applied: plan.shares,
         shares_won: 0,
         won_amount: 0,
-        subscription_fee: row.subscriptionFee,
+        subscription_fee: plan.subscriptionFee,
         winning_fee: 0,
         stamp_formula: '',
         stamp_duty: 0,
         sell_commission: 0,
         settlement_fee: 0,
         transaction_tax: 0,
-        total_fee: row.subscriptionFee,
+        total_fee: plan.subscriptionFee,
         cost_price: costPrice,
         sell_price: '',
         sold: '',
         sell_amount: 0,
         trading_profit: 0,
-        ipo_profit: -row.subscriptionFee,
+        ipo_profit: -plan.subscriptionFee,
         application_amount: plan.applicationAmount,
         target_amount: plan.targetAmount,
         leverage: row.leverage,
-        strategy: `${row.strategy}；三股分配 ${fmt(stock.allocation, 0)}%`,
+        strategy: `${row.strategy}；大智策略：${plan.strategy.label}`,
       }
     })
     const planTotal = stockTotals.find(item => item.stock.id === stock.id)
@@ -302,7 +318,8 @@ export default function IpoTemplate() {
       ipo_price: Number(stock.ipoPrice || 0),
       cost_price: costPrice,
       lot_cost: lotCost,
-      allocation_percent: Number(stock.allocation || 0),
+      strategy: stock.strategy,
+      strategy_label: stockStrategy(stock).label,
       fee_rule: {
         sell_commission: 75,
         settlement_fee: 2,
@@ -317,13 +334,13 @@ export default function IpoTemplate() {
         total_lots: planTotal?.lots || 0,
         total_shares_applied: planTotal?.shares || 0,
         total_application_amount: planTotal?.applicationAmount || 0,
-        total_subscription_fee: totals.subscriptionFee,
-        total_fee: totals.subscriptionFee,
+        total_subscription_fee: planTotal?.subscriptionFee || 0,
+        total_fee: planTotal?.subscriptionFee || 0,
         total_shares_won: 0,
         total_won_amount: 0,
         total_sell_amount: 0,
         trading_profit: 0,
-        ipo_profit: -totals.subscriptionFee,
+        ipo_profit: -(planTotal?.subscriptionFee || 0),
       },
     }
   }
@@ -365,7 +382,7 @@ export default function IpoTemplate() {
         <div>
           <h1 className="text-2xl font-bold">IPO 打新模板</h1>
           <p className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>
-            同一账户资金可拆成三只股票，按不同资金比例分别计算认购手数。
+            同一账户资金可拆成三只股票，按大智策略分别计算认购手数。
           </p>
         </div>
       </div>
@@ -374,7 +391,7 @@ export default function IpoTemplate() {
         <div className="flex flex-wrap justify-between gap-2 mb-3">
           <h2 className="font-semibold">三只股票资金规划</h2>
           <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-            默认按 50 / 30 / 20 分配；确定性最高的票放最大比例，弹性票少量试探。
+            直接选择全力打、重点打、低成本打、摸一手；系统自动换算目标额度和手数。
           </div>
         </div>
         <div className="template-stock-grid">
@@ -394,8 +411,12 @@ export default function IpoTemplate() {
                     <input value={stock.code} onChange={e => updateStock(index, 'code', e.target.value)} placeholder="例如：03388" />
                   </label>
                   <label className="template-field">
-                    <span>资金比例</span>
-                    <input type="number" value={stock.allocation} onChange={e => updateStock(index, 'allocation', e.target.value)} />
+                    <span>大智策略</span>
+                    <select value={stock.strategy} onChange={e => updateStock(index, 'strategy', e.target.value)}>
+                      {Object.entries(stockStrategies).map(([key, strategy]) => (
+                        <option key={key} value={key}>{strategy.label}</option>
+                      ))}
+                    </select>
                   </label>
                   <label className="template-field">
                     <span>每手股数</span>
@@ -413,7 +434,15 @@ export default function IpoTemplate() {
                     <span>每手成本</span>
                     <input value={fmt(lotCost, 2)} readOnly />
                   </label>
+                  <label className="template-field">
+                    <span>低成本费</span>
+                    <select value={stock.lowCostFee} onChange={e => updateStock(index, 'lowCostFee', e.target.value)} disabled={stock.strategy !== 'low_cost'}>
+                      <option value={0}>免费餐 0</option>
+                      <option value={28}>辉立 28</option>
+                    </select>
+                  </label>
                 </div>
+                <div className="template-strategy-desc">{stockStrategy(stock).desc}</div>
                 <div className="template-stock-stats">
                   <span>目标资金 {fmt(total?.targetAmount || 0, 0)}</span>
                   <span>实际申请 {fmt(total?.applicationAmount || 0, 0)}</span>
@@ -424,9 +453,10 @@ export default function IpoTemplate() {
           })}
         </div>
         <div className="template-rule mt-4">
-          <div>规划逻辑：先给三只股票设资金比例，再对每个账户的可认购资金按比例切分。</div>
-          <div>如果一只票确定性明显更高，把比例调到 50%-60%；普通参与放 25%-35%；只是占坑或赔率不确定的票放 10%-20%。</div>
-          <div>系统会按每只股票的目标资金、每手成本和招股书允许档位向下取整，避免单个账户三只股票合计超出可认购资金。</div>
+          <div>全力打：按 80%-90% 强度参与，适合最确定、最想要筹码的票。</div>
+          <div>重点打：中高强度参与，适合值得打但不需要压满的票。</div>
+          <div>低成本打：只打几手，默认免费餐；也可切成辉立 28 套餐。</div>
+          <div>摸一手：每个账户只摸 1 手，用来占坑观察，不主动放大资金。</div>
         </div>
       </section>
 
@@ -435,7 +465,8 @@ export default function IpoTemplate() {
           <h2 className="font-semibold mb-3">成本规则</h2>
           <div className="template-rule">
             <div>成本价 = IPO 价格 × 1.01</div>
-            <div>每行认购手数和手续费都可手动调整；调整后同步重算每只股票申请金额。</div>
+            <div>每行认购手数都可手动调整；调整后同步重算每只股票申请金额。</div>
+            <div>全力打、重点打沿用账户手续费档位；低成本打按股票卡片里的 0/28 计算；摸一手默认不计手续费。</div>
             <div>卖出佣金 75 元、结算费 2 元、交易税 3 元，仅中签账户产生；未中签账户不计这些卖出费用。</div>
           </div>
         </section>
@@ -509,15 +540,17 @@ export default function IpoTemplate() {
           {stockTotals.map(item => (
             <div key={item.stock.id} className="template-summary-item">
               <div className="template-summary-name">{item.stock.name || '未命名股票'}</div>
+              <div>大智策略：{stockStrategy(item.stock).label}</div>
               <div>目标资金：{fmt(item.targetAmount, 0)}</div>
               <div>实际申请：{fmt(item.applicationAmount, 0)}</div>
               <div>总手数：{fmt(item.lots, 0)} 手</div>
+              <div>申购费：{fmt(item.subscriptionFee, 0)}</div>
             </div>
           ))}
           <div className="template-summary-item">
             <div className="template-summary-name">剩余可用</div>
             <div>未用额度：{fmt(totals.remainingPower, 0)}</div>
-            <div>申购费合计：{fmt(totals.subscriptionFee, 0)}</div>
+            <div>申购费合计：{fmt(totalSubscriptionFee, 0)}</div>
             <div>资金使用率：{totals.buyingPower ? fmt((totals.usedAmount / totals.buyingPower) * 100, 1) : 0}%</div>
           </div>
         </div>
@@ -531,7 +564,7 @@ export default function IpoTemplate() {
           </div>
         </div>
         <div className="overflow-x-auto rounded border" style={{ borderColor: 'var(--border)' }}>
-          <table className="w-full min-w-[1980px] text-xs ipo-import-table">
+          <table className="w-full min-w-[2200px] text-xs ipo-import-table">
             <thead>
               <tr>
                 <th className="text-left px-2 py-2">序号</th>
@@ -539,13 +572,14 @@ export default function IpoTemplate() {
                 <th className="text-left px-2 py-2">姓名</th>
                 <th className="text-left px-2 py-2">账户资金</th>
                 <th className="text-left px-2 py-2">融资倍数</th>
-                <th className="text-left px-2 py-2">手续费</th>
+                <th className="text-left px-2 py-2">账户费档</th>
                 <th className="text-left px-2 py-2">可认购资金</th>
                 {stocks.map(stock => (
                   <React.Fragment key={stock.id}>
                     <th className="text-left px-2 py-2">{stock.name || '股票'}目标</th>
                     <th className="text-left px-2 py-2">{stock.name || '股票'}手数</th>
                     <th className="text-left px-2 py-2">{stock.name || '股票'}金额</th>
+                    <th className="text-left px-2 py-2">{stock.name || '股票'}费用</th>
                   </React.Fragment>
                 ))}
                 <th className="text-left px-2 py-2">实际申请</th>
@@ -581,6 +615,7 @@ export default function IpoTemplate() {
                         </div>
                       </td>
                       <td className="px-2 py-1.5">{fmt(plan.applicationAmount, 0)}</td>
+                      <td className="px-2 py-1.5">{fmt(plan.subscriptionFee, 0)}</td>
                     </React.Fragment>
                   ))}
                   <td className="px-2 py-1.5">{fmt(row.usedAmount, 0)}</td>
@@ -595,13 +630,14 @@ export default function IpoTemplate() {
                 <td />
                 <td className="px-2 py-2 font-semibold">{fmt(totals.capital, 0)}</td>
                 <td />
-                <td className="px-2 py-2 font-semibold">{fmt(totals.subscriptionFee, 0)}</td>
+                <td />
                 <td className="px-2 py-2 font-semibold">{fmt(totals.buyingPower, 0)}</td>
                 {stockTotals.map(item => (
                   <React.Fragment key={item.stock.id}>
                     <td className="px-2 py-2 font-semibold">{fmt(item.targetAmount, 0)}</td>
                     <td className="px-2 py-2 font-semibold">{fmt(item.lots, 0)}</td>
                     <td className="px-2 py-2 font-semibold">{fmt(item.applicationAmount, 0)}</td>
+                    <td className="px-2 py-2 font-semibold">{fmt(item.subscriptionFee, 0)}</td>
                   </React.Fragment>
                 ))}
                 <td className="px-2 py-2 font-semibold">{fmt(totals.usedAmount, 0)}</td>
