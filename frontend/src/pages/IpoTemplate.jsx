@@ -44,13 +44,14 @@ const defaultTiers = [
 const stockStrategies = {
   full: { label: '全力打', weight: 85, desc: '80%-90%仓位，适合最确定的核心票' },
   focus: { label: '重点打', weight: 55, desc: '中高仓位，适合值得重点参与的票' },
-  low_cost: { label: '低成本打', weight: 12, capLots: 5, desc: '辉立28套餐或免费餐，只打几手控制成本' },
-  touch_one: { label: '摸一手', weight: 1, fixedLots: 1, desc: '只摸1手，占坑观察' },
+  fee68: { label: '68套餐', weight: 12, capLots: 5, fixedFee: 68, desc: '固定68元套餐，只打几手控制成本' },
+  fee28: { label: '28套餐', weight: 12, capLots: 5, fixedFee: 28, desc: '固定28元套餐，只打几手控制成本' },
+  free: { label: '免费餐', weight: 12, capLots: 5, fixedFee: 0, desc: '免费餐，不计申购手续费，只打几手' },
 }
 const defaultStocks = [
-  { id: 'stock-a', name: '核心票', code: '', lotShares: 100, ipoPrice: 66.4, strategy: 'full', lowCostFee: 0 },
-  { id: 'stock-b', name: '次核心票', code: '', lotShares: 100, ipoPrice: 30, strategy: 'focus', lowCostFee: 0 },
-  { id: 'stock-c', name: '试探票', code: '', lotShares: 100, ipoPrice: 12, strategy: 'low_cost', lowCostFee: 0 },
+  { id: 'stock-a', name: '核心票', code: '', lotShares: 100, ipoPrice: 66.4, strategy: 'full' },
+  { id: 'stock-b', name: '次核心票', code: '', lotShares: 100, ipoPrice: 30, strategy: 'focus' },
+  { id: 'stock-c', name: '试探票', code: '', lotShares: 100, ipoPrice: 12, strategy: 'free' },
 ]
 const allowedLotCounts = [
   ...Array.from({ length: 10 }, (_, index) => index + 1),
@@ -151,7 +152,7 @@ export default function IpoTemplate() {
   const updateStock = (index, key, value) => {
     setStocks(current => current.map((stock, idx) => {
       if (idx !== index) return stock
-      if (['lotShares', 'ipoPrice', 'lowCostFee'].includes(key)) return { ...stock, [key]: Number(value) }
+      if (['lotShares', 'ipoPrice'].includes(key)) return { ...stock, [key]: Number(value) }
       return { ...stock, [key]: value }
     }))
   }
@@ -221,7 +222,7 @@ export default function IpoTemplate() {
         const lots = manualLots[planKey] ?? autoLots
         const shares = lots * Number(stock.lotShares || 0)
         const applicationAmount = lots * lotCost
-        const planFee = stock.strategy === 'low_cost' ? Number(stock.lowCostFee || 0) : stock.strategy === 'touch_one' ? 0 : subscriptionFee
+        const planFee = strategy.fixedFee === undefined ? subscriptionFee : strategy.fixedFee
 
         return {
           stock,
@@ -391,7 +392,7 @@ export default function IpoTemplate() {
         <div className="flex flex-wrap justify-between gap-2 mb-3">
           <h2 className="font-semibold">三只股票资金规划</h2>
           <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-            直接选择全力打、重点打、低成本打、摸一手；系统自动换算目标额度和手数。
+            直接选择全力打、重点打、68套餐、28套餐、免费餐；系统自动换算目标额度和手数。
           </div>
         </div>
         <div className="template-stock-grid">
@@ -434,13 +435,6 @@ export default function IpoTemplate() {
                     <span>每手成本</span>
                     <input value={fmt(lotCost, 2)} readOnly />
                   </label>
-                  <label className="template-field">
-                    <span>低成本费</span>
-                    <select value={stock.lowCostFee} onChange={e => updateStock(index, 'lowCostFee', e.target.value)} disabled={stock.strategy !== 'low_cost'}>
-                      <option value={0}>免费餐 0</option>
-                      <option value={28}>辉立 28</option>
-                    </select>
-                  </label>
                 </div>
                 <div className="template-strategy-desc">{stockStrategy(stock).desc}</div>
                 <div className="template-stock-stats">
@@ -455,8 +449,9 @@ export default function IpoTemplate() {
         <div className="template-rule mt-4">
           <div>全力打：按 80%-90% 强度参与，适合最确定、最想要筹码的票。</div>
           <div>重点打：中高强度参与，适合值得打但不需要压满的票。</div>
-          <div>低成本打：只打几手，默认免费餐；也可切成辉立 28 套餐。</div>
-          <div>摸一手：每个账户只摸 1 手，用来占坑观察，不主动放大资金。</div>
+          <div>68套餐：固定申购费 68，只打几手控制成本。</div>
+          <div>28套餐：固定申购费 28，只打几手控制成本。</div>
+          <div>免费餐：不计申购手续费，只打几手。</div>
         </div>
       </section>
 
@@ -466,7 +461,7 @@ export default function IpoTemplate() {
           <div className="template-rule">
             <div>成本价 = IPO 价格 × 1.01</div>
             <div>每行认购手数都可手动调整；调整后同步重算每只股票申请金额。</div>
-            <div>全力打、重点打沿用账户手续费档位；低成本打按股票卡片里的 0/28 计算；摸一手默认不计手续费。</div>
+            <div>全力打、重点打沿用账户手续费档位；68套餐、28套餐、免费餐分别按固定费用计算。</div>
             <div>卖出佣金 75 元、结算费 2 元、交易税 3 元，仅中签账户产生；未中签账户不计这些卖出费用。</div>
           </div>
         </section>
