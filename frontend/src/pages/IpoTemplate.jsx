@@ -79,7 +79,7 @@ HK076 欧阳志强 107,400
 HK077 何佳临 107,372`
 
 const defaultStrategyPrompt = `天辰生物：发行价 96.06，每手 50 股，所有账户先全力拉满。
-龙丰集团：发行价 6.38，每手 500 股；天辰打完后，剩余额度 3 万以上全部打龙丰，3 万以下按 28 套餐 14 手。
+龙丰集团：发行价 6.38，每手 500 股；天辰打完后，剩余额度 3 万以上全部打龙丰，3 万以下只有够 28 套餐 14 手才打，不够 14 手跳过龙丰。
 大金重工：发行价 66.4，每手 100 股；龙丰后剩余额度继续打大金，默认 28 套餐 7 手，不够 7 手时先打一手。`
 
 const feeOptions = [0, 28, 68, 88, 50, 100]
@@ -219,11 +219,21 @@ function planByRule(stock, remainingPower, accountFee) {
       subscriptionFee = accountFee
       ruleNote = '天辰打完后，剩余额度3万以上全部打龙丰'
     } else {
-      targetAmount = Math.min(14 * lotCost, remainingPower)
-      maxLots = Math.min(14, affordableLots)
-      autoLots = affordableLots >= 14 ? 14 : matchAllowedLotCount(affordableLots)
-      subscriptionFee = 28
-      ruleNote = '天辰打完后，剩余额度3万以下按28套餐14手'
+      const fee28Lots = 14
+      const fee28Cost = fee28Lots * lotCost
+      if (remainingPower >= fee28Cost) {
+        targetAmount = fee28Cost
+        maxLots = fee28Lots
+        autoLots = fee28Lots
+        subscriptionFee = 28
+        ruleNote = '天辰打完后，剩余额度3万以下按28套餐14手'
+      } else {
+        targetAmount = 0
+        maxLots = 0
+        autoLots = 0
+        subscriptionFee = 0
+        ruleNote = '剩余额度不足龙丰28套餐14手，跳过龙丰'
+      }
     }
   } else if (stock.rule === 'dajin_remaining') {
     const sevenLotsCost = 7 * lotCost
@@ -571,7 +581,7 @@ export default function IpoTemplate() {
         </div>
         <div className="template-rule mt-4">
           <div>天辰生物：发行价 96.06，每手 50 股，所有账户先全力拉满。</div>
-          <div>龙丰集团：发行价 6.38，每手 500 股；天辰打完后，剩余额度 3 万以上全部打龙丰，3 万以下按 28 套餐 14 手。</div>
+          <div>龙丰集团：发行价 6.38，每手 500 股；天辰打完后，剩余额度 3 万以上全部打龙丰，3 万以下只有够 28 套餐 14 手才打，不够 14 手跳过龙丰。</div>
           <div>大金重工：发行价 66.4，每手 100 股；龙丰后剩余额度继续打大金，默认 28 套餐 7 手，不够 7 手时先打一手。</div>
         </div>
         <div className="template-strategy-runner">
