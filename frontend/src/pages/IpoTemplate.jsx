@@ -236,9 +236,9 @@ function planByRule(stock, remainingPower, accountFee, leverage = 1) {
       subscriptionFee = 28
       ruleNote = '剩余额度按大金28套餐7手'
     } else {
-      targetAmount = Math.min(lotCost, remainingPower)
-      maxLots = Math.min(1, affordableLots)
-      autoLots = affordableLots >= 1 ? 1 : 0
+      targetAmount = lotCost
+      maxLots = 1
+      autoLots = 1
       subscriptionFee = 0
       ruleNote = '剩余额度不足7手时，大金先打一手'
     }
@@ -284,7 +284,7 @@ export default function IpoTemplate() {
 
   const setManualRowLots = (row, stockPlan, value) => {
     const key = makeManualKey(row, stockPlan.stock)
-    const capped = Math.min(Number(value || 0), stockPlan.maxLots)
+    const capped = Math.min(Number(value || 0), Math.max(stockPlan.maxLots, stockPlan.autoLots, stockPlan.lots, 1))
     setManualLots(current => ({ ...current, [key]: matchAllowedLotCount(capped) }))
   }
 
@@ -293,7 +293,8 @@ export default function IpoTemplate() {
     setManualLots(current => {
       const base = current[key] ?? stockPlan.lots
       const nextLots = adjacentAllowedLotCount(base, direction)
-      return { ...current, [key]: matchAllowedLotCount(Math.min(nextLots, stockPlan.maxLots)) }
+      const cap = Math.max(stockPlan.maxLots, stockPlan.autoLots, stockPlan.lots, 1)
+      return { ...current, [key]: matchAllowedLotCount(Math.min(nextLots, cap)) }
     })
   }
 
