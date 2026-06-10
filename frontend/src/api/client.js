@@ -18,7 +18,7 @@ export function isLoggedIn() {
 
 async function request(path, options = {}) {
   const token = getToken()
-  const headers = { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache', ...options.headers }
+  const headers = { 'Content-Type': 'application/json', ...options.headers }
   if (token) headers['Authorization'] = `Bearer ${token}`
 
   const method = options.method || 'GET'
