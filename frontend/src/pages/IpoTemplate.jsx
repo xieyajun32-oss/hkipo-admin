@@ -78,17 +78,60 @@ HK075 唐杰 112,000
 HK076 欧阳志强 107,400
 HK077 何佳临 107,372`
 
-const defaultStrategyPrompt = `天辰生物：发行价 96.06，每手 50 股，所有账户先全力拉满。
-龙丰集团：发行价 6.38，每手 500 股；天辰打完后，剩余现金 3 万以上全部打龙丰，3 万以下按 28 套餐，最多 14 手。
-大金重工：发行价 66.4，每手 100 股；龙丰后剩余额度继续打大金，默认 28 套餐 7 手，不够 7 手时先打一手。`
+const liuliumeiTiersText = `100 4,401.96
+200 8,803.90
+300 13,205.85
+400 17,607.80
+500 22,009.75
+600 26,411.71
+700 30,813.65
+800 35,215.60
+900 39,617.56
+1,000 44,019.51
+1,500 66,029.25
+2,000 88,039.00
+2,500 110,048.76
+3,000 132,058.52
+3,500 154,068.27
+4,000 176,078.02
+4,500 198,087.76
+5,000 220,097.52
+6,000 264,117.02
+7,000 308,136.54
+8,000 352,156.03
+9,000 396,175.54
+10,000 440,195.04
+20,000 880,390.09
+30,000 1,320,585.13
+40,000 1,760,780.17
+50,000 2,200,975.21
+60,000 2,641,170.26
+70,000 3,081,365.31
+80,000 3,521,560.34
+90,000 3,961,755.38
+100,000 4,401,950.44
+150,000 6,602,925.65
+200,000 8,803,900.85
+250,000 11,004,876.08
+300,000 13,205,851.29
+350,000 15,406,826.50
+400,000 17,607,801.72
+450,000 19,808,776.94
+573,200 25,231,979.86`
+
+const defaultStrategyPrompt = `溜溜梅（6658）：发行价 43.58，每手 100 股。
+账户名带“甲尾”的目标申购 100,000 股，按 10 倍融资。
+账户名带“乙头”或“乙组”的目标申购 150,000 股，按 10 倍融资。
+其他账户全部现金申购，按账户现金落到招股书合法档位。`
 
 const feeOptions = [0, 28, 68, 88, 50, 100]
 const defaultTiers = [
-  { threshold: 50000, leverage: 10, fee: 88 },
-  { threshold: 0, leverage: 10, fee: 28 },
+  { threshold: 50000, leverage: 1, fee: 88 },
+  { threshold: 0, leverage: 1, fee: 28 },
 ]
 const stockStrategies = {
-  full: { label: '全力打', weight: 85, desc: '80%-90%仓位，适合最确定的核心票' },
+  liuliumei: { label: '溜溜梅策略', weight: 100, desc: '甲尾/乙组10倍融资；其他账户现金申购并落到招股书合法档位' },
+  full: { label: '全力打', weight: 100, desc: '优先使用当前可用额度，按招股书合法档位尽量拉满' },
   focus: { label: '重点打', weight: 55, desc: '中高仓位，适合值得重点参与的票' },
   fee68: { label: '68套餐', weight: 12, capLots: 5, fixedFee: 68, desc: '固定68元套餐，只打几手控制成本' },
   fee28: { label: '28套餐', weight: 12, capLots: 5, fixedFee: 28, desc: '固定28元套餐，只打几手控制成本' },
@@ -97,33 +140,14 @@ const stockStrategies = {
 const defaultStocks = [
   {
     id: 'stock-a',
-    name: '天辰生物',
-    code: '1779',
-    lotShares: 50,
-    ipoPrice: 96.06,
-    strategy: 'full',
-    rule: 'tianchen_full',
-    lotOptionsText: '1,2,3,4,5,6,7,8,9,10,20,40,60,80,100,200,400,600,800,1000,2000,3000',
-  },
-  {
-    id: 'stock-b',
-    name: '龙丰集团',
-    code: '2290',
-    lotShares: 500,
-    ipoPrice: 6.38,
-    strategy: 'focus',
-    rule: 'longfeng_after_tianchen',
-    lotOptionsText: '1,2,3,4,5,6,7,8,9,10,14,15,20,25,30,35,40,45,50,60,70,80,90,100,200,300,400,500,600,700,800,900,1000',
-  },
-  {
-    id: 'stock-c',
-    name: '大金重工',
-    code: '1081',
+    name: '溜溜梅',
+    code: '6658',
     lotShares: 100,
-    ipoPrice: 66.4,
-    strategy: 'fee28',
-    rule: 'dajin_remaining',
-    lotOptionsText: '1,7,14,20,30,40,50,60,80,100,200,400,600,800,1000',
+    ipoPrice: 43.58,
+    strategy: 'liuliumei',
+    rule: 'liuliumei_6658',
+    lotOptionsText: '1,2,3,4,5,6,7,8,9,10,15,20,25,30,35,40,45,50,60,70,80,90,100,200,300,400,500,600,700,800,900,1000,1500,2000,2500,3000,3500,4000,4500,5732',
+    applicationTiersText: liuliumeiTiersText,
   },
 ]
 const fallbackLotOptions = '1,2,3,4,5,6,7,8,9,10,20,40,60,80,100,200,400,600,800,1000'
@@ -293,6 +317,17 @@ function stockStrategy(stock) {
   return stockStrategies[stock.strategy] || stockStrategies.focus
 }
 
+function accountIpoTag(row) {
+  const name = row?.name || ''
+  if (name.includes('乙头') || name.includes('乙组')) return '乙组'
+  if (name.includes('甲尾')) return '甲尾'
+  return '现金'
+}
+
+function accountLeverage(row, tier) {
+  return accountIpoTag(row) === '现金' ? 1 : 10
+}
+
 function makeManualKey(row, stock) {
   return `${row.accountKey}-${stock.id}`
 }
@@ -314,7 +349,7 @@ function extractStockConfig(text, fallback) {
   }
 }
 
-function planByRule(stock, remainingCash, accountFee, leverage = 1, reserveCash = 0) {
+function planByRule(stock, remainingCash, accountFee, leverage = 1, reserveCash = 0, accountRow = null) {
   const strategy = stockStrategy(stock)
   const { costPrice, lotCost } = stockCost(stock)
   const activeLeverage = clampLeverage(leverage)
@@ -328,12 +363,27 @@ function planByRule(stock, remainingCash, accountFee, leverage = 1, reserveCash 
   let subscriptionFee = fallbackFee
   let ruleNote = strategy.desc
 
-  if (stock.rule === 'tianchen_full') {
-    targetAmount = remainingPower * (strategy.weight / 100)
-    maxLots = matchAffordableLotCount(targetAmount, stock)
-    autoLots = matchAffordableLotCount(targetAmount, stock, maxLots)
+  if (stock.rule === 'liuliumei_6658') {
+    const tag = accountIpoTag(accountRow)
+    const targetLotsByTag = {
+      甲尾: 1000,
+      乙组: 1500,
+    }
+    const targetLots = targetLotsByTag[tag] || affordableLots
+    const targetTier = stockTierByLots(stock, targetLots)
+    targetAmount = targetTier?.amount || remainingPower
+    maxLots = Math.min(targetLots, affordableLots)
+    autoLots = matchAffordableLotCount(remainingPower, stock, maxLots)
+    subscriptionFee = tag === '现金' ? 0 : accountFee
+    ruleNote = tag === '现金'
+      ? '现金账户：按账户现金申购，自动落到招股书合法档位'
+      : `${tag}账户：目标${fmt(targetTier?.shares || targetLots * Number(stock.lotShares || 0), 0)}股，10倍融资，资金不足则自动降到可承受合法档位`
+  } else if (stock.rule === 'tianchen_full') {
+    targetAmount = remainingPower
+    maxLots = affordableLots
+    autoLots = matchAffordableLotCount(remainingPower, stock, maxLots)
     subscriptionFee = accountFee
-    ruleNote = '全力打按85%左右资金匹配本股票招股书合法档位'
+    ruleNote = '全力打按当前可用融资额度匹配招股书合法档位'
   } else if (stock.rule === 'longfeng_after_tianchen') {
     if (remainingCash >= 30000) {
       autoLots = matchAffordableLotCount(remainingPower, stock)
@@ -377,14 +427,6 @@ function planByRule(stock, remainingCash, accountFee, leverage = 1, reserveCash 
     subscriptionFee,
     ruleNote,
   }
-}
-
-function futureReserveCash(stocks, startIndex, leverage) {
-  const activeLeverage = clampLeverage(leverage)
-  return stocks.slice(startIndex + 1).reduce((sum, stock) => {
-    if (stock.rule !== 'dajin_remaining') return sum
-    return sum + stockCost(stock).lotCost / activeLeverage
-  }, 0)
 }
 
 export default function IpoTemplate() {
@@ -465,13 +507,13 @@ export default function IpoTemplate() {
     return parseAccounts(accountsText).map(row => {
       const accountKey = `${row.code}-${row.name}-${row.index}`
       const tier = matchTier(row.capital, tiers)
-      const leverage = clampLeverage(tier?.leverage)
+      const leverage = accountLeverage(row, tier)
       const tierFee = Number(tier?.fee || 0)
       const subscriptionFee = manualFees[accountKey] ?? tierFee
       const buyingPower = row.capital * leverage
       let remainingCash = row.capital
-      const stockPlans = stocks.map((stock, stockIndex) => {
-        const autoPlan = planByRule(stock, remainingCash, subscriptionFee, leverage, futureReserveCash(stocks, stockIndex, leverage))
+      const stockPlans = stocks.map(stock => {
+        const autoPlan = planByRule(stock, remainingCash, subscriptionFee, leverage, 0, row)
         const planKey = makeManualKey({ accountKey }, stock)
         const manualLotsValue = manualLots[planKey]
         const lots = matchAllowedLotCount(Math.min(manualLotsValue ?? autoPlan.autoLots, autoPlan.maxLots), stock)
@@ -510,7 +552,8 @@ export default function IpoTemplate() {
         usedAmount,
         remainingPower: remainingCash,
         stockPlans,
-        strategy: tierLabel(tier),
+        strategy: `${accountIpoTag(row)}账户；实际${leverage}倍；${tierLabel(tier)}`,
+        accountTag: accountIpoTag(row),
       }
     })
   }, [accountsText, manualFees, manualLots, stocks, tiers])
@@ -577,7 +620,7 @@ export default function IpoTemplate() {
 
     return {
       source: 'ipo-template',
-      mode: 'three-stock-capital-plan',
+      mode: 'liuliumei-6658-capital-plan',
       imported_at: new Date().toISOString(),
       lot_shares: Number(stock.lotShares || 0),
       ipo_price: Number(stock.ipoPrice || 0),
@@ -628,6 +671,9 @@ export default function IpoTemplate() {
           stock_name: stock.name.trim(),
           stock_code: stock.code.trim(),
           offer_price: Number(stock.ipoPrice || 0),
+          subscription_start: '2026-06-05',
+          subscription_end: '2026-06-10',
+          listing_date: '2026-06-15',
           notes: JSON.stringify(buildIpoNotes(stock)),
         }
         created.push(await api.post('/ipos', payload))
@@ -648,16 +694,16 @@ export default function IpoTemplate() {
         <div>
           <h1 className="text-2xl font-bold">IPO 打新模板</h1>
           <p className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>
-            已按本次三只新股预填：先全力打天辰，再用剩余现金打龙丰，最后打大金。
+            已按溜溜梅（6658）预填：甲尾/乙组10倍融资，其他账户现金申购。
           </p>
         </div>
       </div>
 
       <section className="template-panel">
         <div className="flex flex-wrap justify-between gap-2 mb-3">
-          <h2 className="font-semibold">三只股票资金规划</h2>
+          <h2 className="font-semibold">溜溜梅资金规划</h2>
           <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-            天辰生物、龙丰集团、大金重工已填好发行价、每手股数和默认策略。
+            溜溜梅已填好发行价、每手股数、完整招股书档位和默认策略。
           </div>
         </div>
         <div className="template-stock-grid">
@@ -724,9 +770,10 @@ export default function IpoTemplate() {
           })}
         </div>
         <div className="template-rule mt-4">
-          <div>天辰生物：发行价 96.06，每手 50 股，所有账户先全力拉满。</div>
-          <div>龙丰集团：发行价 6.38，每手 500 股；天辰打完后，剩余现金 3 万以上全部打龙丰，3 万以下按 28 套餐，最多 14 手。</div>
-          <div>大金重工：发行价 66.4，每手 100 股；龙丰后剩余现金继续打大金，默认 28 套餐 7 手，不够 7 手时先打一手。</div>
+          <div>溜溜梅：发行价 43.58 港元，每手 100 股，一手入场费 4,401.96 港元。</div>
+          <div>甲尾账户：目标 100,000 股，申购款 4,401,950.44 港元，按 10 倍融资。</div>
+          <div>乙组账户：目标 150,000 股，申购款 6,602,925.65 港元，按 10 倍融资。</div>
+          <div>其他账户：全部现金申购，按账户现金自动落到招股书合法档位。</div>
         </div>
         <div className="template-strategy-runner">
           <label className="template-field">
@@ -776,7 +823,7 @@ export default function IpoTemplate() {
         <div className="flex flex-wrap justify-between gap-2 mb-3">
           <h2 className="font-semibold">资金分界与手续费标准</h2>
           <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-            倍数限制 1-10；手续费可选 0、28、50、68、88、100。
+              甲尾/乙组账户自动按10倍融资；其他账户强制现金。手续费可选 0、28、50、68、88、100。
           </div>
         </div>
         <div className="overflow-x-auto rounded border" style={{ borderColor: 'var(--border)' }}>
@@ -815,7 +862,7 @@ export default function IpoTemplate() {
 
       <section className="template-panel mt-4">
         <div className="flex flex-wrap justify-between gap-2 mb-3">
-          <h2 className="font-semibold">三股认购总览</h2>
+          <h2 className="font-semibold">认购总览</h2>
           <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>
             总账户资金 {fmt(totals.capital, 0)}；可认购资金 {fmt(totals.buyingPower, 0)}；实际占用 {fmt(totals.usedAmount, 0)}
           </div>
@@ -845,7 +892,7 @@ export default function IpoTemplate() {
         <div className="flex flex-wrap justify-between gap-2 mb-3">
           <h2 className="font-semibold">逐账户拆分表</h2>
           <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-            每个账户三只股票分别可调手数。
+            每个账户可调手数；自动值已按“甲尾/乙组10倍融资，其他现金”生成。
           </div>
         </div>
         <div className="overflow-x-auto rounded border" style={{ borderColor: 'var(--border)' }}>
@@ -855,6 +902,7 @@ export default function IpoTemplate() {
                 <th className="text-left px-2 py-2">序号</th>
                 <th className="text-left px-2 py-2">手机编号</th>
                 <th className="text-left px-2 py-2">姓名</th>
+                <th className="text-left px-2 py-2">账户类型</th>
                 <th className="text-left px-2 py-2">账户资金</th>
                 <th className="text-left px-2 py-2">融资倍数</th>
                 <th className="text-left px-2 py-2">账户费档</th>
@@ -877,6 +925,7 @@ export default function IpoTemplate() {
                   <td className="px-2 py-1.5">{row.index}</td>
                   <td className="px-2 py-1.5">{row.code}</td>
                   <td className="px-2 py-1.5">{row.name || '-'}</td>
+                  <td className="px-2 py-1.5">{row.accountTag}</td>
                   <td className="px-2 py-1.5">{fmt(row.capital, 0)}</td>
                   <td className="px-2 py-1.5">{fmt(row.leverage, 0)}</td>
                   <td className="px-2 py-1.5">
