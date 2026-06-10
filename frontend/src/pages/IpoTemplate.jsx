@@ -965,6 +965,7 @@ export default function IpoTemplate() {
                 <td className="px-2 py-2 font-semibold">合计</td>
                 <td />
                 <td />
+                <td />
                 <td className="px-2 py-2 font-semibold">{fmt(totals.capital, 0)}</td>
                 <td />
                 <td />
@@ -991,7 +992,7 @@ export default function IpoTemplate() {
             className="px-4 py-2 rounded-lg text-sm font-semibold disabled:opacity-60"
             style={{ background: 'var(--accent)', color: '#1a1a1a' }}
           >
-            {saving ? '正在导入...' : '确认无误，导入三只 IPO 打新'}
+            {saving ? '正在导入...' : '确认无误，导入 IPO 打新'}
           </button>
         </div>
       </section>
