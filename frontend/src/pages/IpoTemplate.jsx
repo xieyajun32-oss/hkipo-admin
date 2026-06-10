@@ -120,9 +120,9 @@ const liuliumeiTiersText = `100 4,401.96
 573,200 25,231,979.86`
 
 const defaultStrategyPrompt = `溜溜梅（6658）：发行价 43.58，每手 100 股。
-账户名带“甲尾”的目标申购 100,000 股，按 10 倍融资。
-账户名带“乙头”或“乙组”的目标申购 150,000 股，按 10 倍融资。
-其他账户全部现金申购，按账户现金落到招股书合法档位。`
+账户资金大于等于 440,195.04 港元的账户融资打，融资费 88。
+其中资金大于等于 660,292.57 港元的账户走乙头 150,000 股；其余融资账户走甲尾 100,000 股。
+其他账户全部现金申购，不收手续费，并按账户现金落到招股书合法档位。`
 
 const feeOptions = [0, 28, 68, 88, 50, 100]
 const defaultTiers = [
@@ -130,7 +130,7 @@ const defaultTiers = [
   { threshold: 0, leverage: 1, fee: 28 },
 ]
 const stockStrategies = {
-  liuliumei: { label: '溜溜梅策略', weight: 100, desc: '甲尾/乙组10倍融资；其他账户现金申购并落到招股书合法档位' },
+  liuliumei: { label: '溜溜梅策略', weight: 100, desc: '资金大于等于44.02万融资打；乙头门槛66.03万；其他账户现金申购且不收手续费' },
   full: { label: '全力打', weight: 100, desc: '优先使用当前可用额度，按招股书合法档位尽量拉满' },
   focus: { label: '重点打', weight: 55, desc: '中高仓位，适合值得重点参与的票' },
   fee68: { label: '68套餐', weight: 12, capLots: 5, fixedFee: 68, desc: '固定68元套餐，只打几手控制成本' },
@@ -318,9 +318,9 @@ function stockStrategy(stock) {
 }
 
 function accountIpoTag(row) {
-  const name = row?.name || ''
-  if (name.includes('乙头') || name.includes('乙组')) return '乙组'
-  if (name.includes('甲尾')) return '甲尾'
+  const capital = Number(row?.capital || 0)
+  if (capital >= 660292.57) return '乙头'
+  if (capital >= 440195.04) return '甲尾'
   return '现金'
 }
 
@@ -367,16 +367,16 @@ function planByRule(stock, remainingCash, accountFee, leverage = 1, reserveCash 
     const tag = accountIpoTag(accountRow)
     const targetLotsByTag = {
       甲尾: 1000,
-      乙组: 1500,
+      乙头: 1500,
     }
     const targetLots = targetLotsByTag[tag] || affordableLots
     const targetTier = stockTierByLots(stock, targetLots)
     targetAmount = targetTier?.amount || remainingPower
     maxLots = Math.min(targetLots, affordableLots)
     autoLots = matchAffordableLotCount(remainingPower, stock, maxLots)
-    subscriptionFee = tag === '现金' ? 0 : accountFee
+    subscriptionFee = tag === '现金' ? 0 : 88
     ruleNote = tag === '现金'
-      ? '现金账户：按账户现金申购，自动落到招股书合法档位'
+      ? '现金账户：不收手续费，按账户现金申购，自动落到招股书合法档位'
       : `${tag}账户：目标${fmt(targetTier?.shares || targetLots * Number(stock.lotShares || 0), 0)}股，10倍融资，资金不足则自动降到可承受合法档位`
   } else if (stock.rule === 'tianchen_full') {
     targetAmount = remainingPower
@@ -694,7 +694,7 @@ export default function IpoTemplate() {
         <div>
           <h1 className="text-2xl font-bold">IPO 打新模板</h1>
           <p className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>
-            已按溜溜梅（6658）预填：甲尾/乙组10倍融资，其他账户现金申购。
+            已按溜溜梅（6658）预填：资金大于等于44.02万融资打，其他账户现金申购。
           </p>
         </div>
       </div>
@@ -771,9 +771,9 @@ export default function IpoTemplate() {
         </div>
         <div className="template-rule mt-4">
           <div>溜溜梅：发行价 43.58 港元，每手 100 股，一手入场费 4,401.96 港元。</div>
-          <div>甲尾账户：目标 100,000 股，申购款 4,401,950.44 港元，按 10 倍融资。</div>
-          <div>乙组账户：目标 150,000 股，申购款 6,602,925.65 港元，按 10 倍融资。</div>
-          <div>其他账户：全部现金申购，按账户现金自动落到招股书合法档位。</div>
+          <div>甲尾账户：账户资金大于等于 440,195.04 港元且不足 660,292.57 港元，目标 100,000 股，10 倍融资，融资费 88。</div>
+          <div>乙头账户：账户资金大于等于 660,292.57 港元，目标 150,000 股，10 倍融资，融资费 88。</div>
+          <div>其他账户：全部现金申购，不收手续费，按账户现金自动落到招股书合法档位。</div>
         </div>
         <div className="template-strategy-runner">
           <label className="template-field">
@@ -823,7 +823,7 @@ export default function IpoTemplate() {
         <div className="flex flex-wrap justify-between gap-2 mb-3">
           <h2 className="font-semibold">资金分界与手续费标准</h2>
           <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-              甲尾/乙组账户自动按10倍融资；其他账户强制现金。手续费可选 0、28、50、68、88、100。
+              账户资金大于等于44.02万自动按10倍融资并收88融资费；其他账户强制现金且手续费为0。
           </div>
         </div>
         <div className="overflow-x-auto rounded border" style={{ borderColor: 'var(--border)' }}>
@@ -892,7 +892,7 @@ export default function IpoTemplate() {
         <div className="flex flex-wrap justify-between gap-2 mb-3">
           <h2 className="font-semibold">逐账户拆分表</h2>
           <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-            每个账户可调手数；自动值已按“甲尾/乙组10倍融资，其他现金”生成。
+            每个账户可调手数；自动值已按“44.02万以上融资，其他现金”生成。
           </div>
         </div>
         <div className="overflow-x-auto rounded border" style={{ borderColor: 'var(--border)' }}>
