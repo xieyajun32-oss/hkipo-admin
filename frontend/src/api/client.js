@@ -18,10 +18,15 @@ export function isLoggedIn() {
 
 async function request(path, options = {}) {
   const token = getToken()
-  const headers = { 'Content-Type': 'application/json', ...options.headers }
+  const headers = { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache', ...options.headers }
   if (token) headers['Authorization'] = `Bearer ${token}`
 
-  const res = await fetch(`${API_BASE}${path}`, { ...options, headers })
+  const method = options.method || 'GET'
+  const url = method === 'GET'
+    ? `${API_BASE}${path}${path.includes('?') ? '&' : '?'}_=${Date.now()}`
+    : `${API_BASE}${path}`
+
+  const res = await fetch(url, { ...options, headers, cache: 'no-store' })
   const data = await res.json()
   if (res.status === 401) {
     clearToken()
