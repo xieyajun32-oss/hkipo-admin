@@ -508,7 +508,8 @@ export default function IpoTemplate() {
       const accountKey = `${row.code}-${row.name}-${row.index}`
       const tier = matchTier(row.capital, tiers)
       const leverage = accountLeverage(row, tier)
-      const tierFee = Number(tier?.fee || 0)
+      const accountTag = accountIpoTag(row)
+      const tierFee = accountTag === '现金' ? 0 : 88
       const subscriptionFee = manualFees[accountKey] ?? tierFee
       const buyingPower = row.capital * leverage
       let remainingCash = row.capital
@@ -552,8 +553,8 @@ export default function IpoTemplate() {
         usedAmount,
         remainingPower: remainingCash,
         stockPlans,
-        strategy: `${accountIpoTag(row)}账户；实际${leverage}倍；${tierLabel(tier)}`,
-        accountTag: accountIpoTag(row),
+        strategy: `${accountTag}账户；实际${leverage}倍；账户费${subscriptionFee}`,
+        accountTag,
       }
     })
   }, [accountsText, manualFees, manualLots, stocks, tiers])
@@ -928,11 +929,11 @@ export default function IpoTemplate() {
                   <td className="px-2 py-1.5">{row.accountTag}</td>
                   <td className="px-2 py-1.5">{fmt(row.capital, 0)}</td>
                   <td className="px-2 py-1.5">{fmt(row.leverage, 0)}</td>
-                  <td className="px-2 py-1.5">
-                    <div className="template-fee-control">
-                      <select value={row.subscriptionFee} onChange={e => setManualRowFee(row, e.target.value)}>
-                        {feeOptions.map(fee => <option key={fee} value={fee}>{fee}</option>)}
-                      </select>
+	                  <td className="px-2 py-1.5">
+	                    <div className="template-fee-control">
+	                      <select value={row.subscriptionFee} onChange={e => setManualRowFee(row, e.target.value)}>
+	                        {(row.accountTag === '现金' ? [0] : feeOptions).map(fee => <option key={fee} value={fee}>{fee}</option>)}
+	                      </select>
                       <button type="button" onClick={() => resetManualRowFee(row)}>自动</button>
                     </div>
                   </td>
