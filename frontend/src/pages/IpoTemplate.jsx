@@ -119,17 +119,58 @@ const liuliumeiTiersText = `100 4,401.96
 450,000 19,808,776.94
 573,200 25,231,979.86`
 
-const defaultStrategyPrompt = `溜溜梅（6658）：发行价 43.58，每手 100 股。
-账户资金大于等于 440,195.04 港元的账户融资打，融资费 88。
-其中资金大于等于 660,292.57 港元的账户走乙头 150,000 股；其余融资账户走甲尾 100,000 股。
-其他账户全部现金申购，不收手续费，并按账户现金落到招股书合法档位。`
+const senasicTiersText = `200 3,709.04
+400 7,418.06
+600 11,127.10
+800 14,836.13
+1,000 18,545.17
+1,200 22,254.18
+1,400 25,963.22
+1,600 29,672.25
+1,800 33,381.29
+2,000 37,090.32
+3,000 55,635.48
+4,000 74,180.64
+5,000 92,725.81
+6,000 111,270.96
+7,000 129,816.12
+8,000 148,361.29
+9,000 166,906.45
+10,000 185,451.61
+20,000 370,903.21
+30,000 556,354.82
+40,000 741,806.42
+50,000 927,258.04
+60,000 1,112,709.63
+70,000 1,298,161.24
+80,000 1,483,612.85
+90,000 1,669,064.45
+100,000 1,854,516.05
+200,000 3,709,032.12
+300,000 5,563,548.18
+400,000 7,418,064.25
+500,000 9,272,580.30
+600,000 11,127,096.35
+700,000 12,981,612.42
+800,000 14,836,128.48
+900,000 16,690,644.55
+1,000,000 18,545,160.60
+1,500,000 27,817,740.90
+2,000,000 37,090,321.20
+2,670,400 49,522,996.86`
+
+const defaultStrategyPrompt = `SENASIC（6675）：发行价 18.36，每手 200 股。
+4号、7号账户已退，不打。
+10万以上本金全部融资打，按10倍购买力取不超过购买力的招股书最高档位，融资费 88。
+10万以下本金打28套餐，对应 10手 / 2,000股 / 37,090.32港元档，手续费 28。`
 
 const feeOptions = [0, 28, 68, 88, 50, 100]
 const defaultTiers = [
-  { threshold: 50000, leverage: 1, fee: 88 },
-  { threshold: 0, leverage: 1, fee: 28 },
+  { threshold: 100000, leverage: 10, fee: 88 },
+  { threshold: 0, leverage: 10, fee: 28 },
 ]
 const stockStrategies = {
+  senasic: { label: 'SENASIC策略', weight: 100, desc: '4号/7号不打；10万以上本金全部融资打；10万以下走28套餐10手' },
   liuliumei: { label: '溜溜梅策略', weight: 100, desc: '资金大于等于44.02万融资打；乙头门槛66.03万；其他账户现金申购且不收手续费' },
   full: { label: '全力打', weight: 100, desc: '优先使用当前可用额度，按招股书合法档位尽量拉满' },
   focus: { label: '重点打', weight: 55, desc: '中高仓位，适合值得重点参与的票' },
@@ -140,14 +181,17 @@ const stockStrategies = {
 const defaultStocks = [
   {
     id: 'stock-a',
-    name: '溜溜梅',
-    code: '6658',
-    lotShares: 100,
-    ipoPrice: 43.58,
-    strategy: 'liuliumei',
-    rule: 'liuliumei_6658',
-    lotOptionsText: '1,2,3,4,5,6,7,8,9,10,15,20,25,30,35,40,45,50,60,70,80,90,100,200,300,400,500,600,700,800,900,1000,1500,2000,2500,3000,3500,4000,4500,5732',
-    applicationTiersText: liuliumeiTiersText,
+    name: 'SENASIC',
+    code: '6675',
+    lotShares: 200,
+    ipoPrice: 18.36,
+    strategy: 'senasic',
+    rule: 'senasic_6675',
+    subscriptionStart: '2026-06-09',
+    subscriptionEnd: '2026-06-12 12:00',
+    listingDate: '2026-06-17',
+    lotOptionsText: '1,2,3,4,5,6,7,8,9,10,15,20,25,30,35,40,45,50,60,70,80,90,100,200,300,400,500,600,700,800,900,1000,1500,2000,26704',
+    applicationTiersText: senasicTiersText,
   },
 ]
 const fallbackLotOptions = '1,2,3,4,5,6,7,8,9,10,20,40,60,80,100,200,400,600,800,1000'
@@ -317,15 +361,23 @@ function stockStrategy(stock) {
   return stockStrategies[stock.strategy] || stockStrategies.focus
 }
 
-function accountIpoTag(row) {
+function accountIpoTag(row, stock) {
+  if (stock?.rule === 'senasic_6675') {
+    if ([4, 7].includes(Number(row?.index || 0))) return '不打'
+    if (Number(row?.capital || 0) >= 100000) return '融资'
+    return '28套餐'
+  }
   const capital = Number(row?.capital || 0)
   if (capital >= 660292.57) return '乙头'
   if (capital >= 440195.04) return '甲尾'
   return '现金'
 }
 
-function accountLeverage(row, tier) {
-  return accountIpoTag(row) === '现金' ? 1 : 10
+function accountLeverage(row, tier, stock) {
+  const tag = accountIpoTag(row, stock)
+  if (tag === '不打') return 0
+  if (stock?.rule === 'senasic_6675') return 10
+  return tag === '现金' ? 1 : 10
 }
 
 function makeManualKey(row, stock) {
@@ -364,7 +416,7 @@ function planByRule(stock, remainingCash, accountFee, leverage = 1, reserveCash 
   let ruleNote = strategy.desc
 
   if (stock.rule === 'liuliumei_6658') {
-    const tag = accountIpoTag(accountRow)
+    const tag = accountIpoTag(accountRow, stock)
     const targetLotsByTag = {
       甲尾: 1000,
       乙头: 1500,
@@ -378,6 +430,29 @@ function planByRule(stock, remainingCash, accountFee, leverage = 1, reserveCash 
     ruleNote = tag === '现金'
       ? '现金账户：不收手续费，按账户现金申购，自动落到招股书合法档位'
       : `${tag}账户：目标${fmt(targetTier?.shares || targetLots * Number(stock.lotShares || 0), 0)}股，10倍融资，资金不足则自动降到可承受合法档位`
+  } else if (stock.rule === 'senasic_6675') {
+    const tag = accountIpoTag(accountRow, stock)
+    if (tag === '不打') {
+      targetAmount = 0
+      maxLots = 0
+      autoLots = 0
+      subscriptionFee = 0
+      ruleNote = '4号/7号账户已退，不参与本轮申购'
+    } else if (tag === '28套餐') {
+      const fee28Lots = 10
+      const fee28Tier = stockTierByLots(stock, fee28Lots)
+      targetAmount = fee28Tier?.amount || fee28Lots * lotCost
+      maxLots = fee28Lots
+      autoLots = fee28Lots
+      subscriptionFee = 28
+      ruleNote = '10万以下本金：28套餐，按10手/2,000股/37,090.32港元档执行'
+    } else {
+      targetAmount = remainingPower
+      maxLots = affordableLots
+      autoLots = matchAffordableLotCount(remainingPower, stock, affordableLots)
+      subscriptionFee = 88
+      ruleNote = '10万以上本金：全部融资打，按10倍购买力取不超过购买力的招股书最高档位'
+    }
   } else if (stock.rule === 'tianchen_full') {
     targetAmount = remainingPower
     maxLots = affordableLots
@@ -507,8 +582,9 @@ export default function IpoTemplate() {
     return parseAccounts(accountsText).map(row => {
       const accountKey = `${row.code}-${row.name}-${row.index}`
       const tier = matchTier(row.capital, tiers)
-      const leverage = accountLeverage(row, tier)
-      const accountTag = accountIpoTag(row)
+      const primaryStock = stocks[0]
+      const leverage = accountLeverage(row, tier, primaryStock)
+      const accountTag = accountIpoTag(row, primaryStock)
       const tierFee = accountTag === '现金' ? 0 : 88
       const subscriptionFee = manualFees[accountKey] ?? tierFee
       const buyingPower = row.capital * leverage
@@ -621,7 +697,7 @@ export default function IpoTemplate() {
 
     return {
       source: 'ipo-template',
-      mode: 'liuliumei-6658-capital-plan',
+      mode: `${stock.rule || stock.strategy || 'custom'}-capital-plan`,
       imported_at: new Date().toISOString(),
       lot_shares: Number(stock.lotShares || 0),
       ipo_price: Number(stock.ipoPrice || 0),
@@ -672,9 +748,9 @@ export default function IpoTemplate() {
           stock_name: stock.name.trim(),
           stock_code: stock.code.trim(),
           offer_price: Number(stock.ipoPrice || 0),
-          subscription_start: '2026-06-05',
-          subscription_end: '2026-06-10',
-          listing_date: '2026-06-15',
+          subscription_start: stock.subscriptionStart || '2026-06-09',
+          subscription_end: stock.subscriptionEnd || '2026-06-12 12:00',
+          listing_date: stock.listingDate || '2026-06-17',
           notes: JSON.stringify(buildIpoNotes(stock)),
         }
         created.push(await api.post('/ipos', payload))
@@ -695,16 +771,16 @@ export default function IpoTemplate() {
         <div>
           <h1 className="text-2xl font-bold">IPO 打新模板</h1>
           <p className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>
-            已按溜溜梅（6658）预填：资金大于等于44.02万融资打，其他账户现金申购。
+            已按 SENASIC（6675）预填：4号/7号不打，10万以上全部融资，10万以下28套餐。
           </p>
         </div>
       </div>
 
       <section className="template-panel">
         <div className="flex flex-wrap justify-between gap-2 mb-3">
-          <h2 className="font-semibold">溜溜梅资金规划</h2>
+          <h2 className="font-semibold">SENASIC 资金规划</h2>
           <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-            溜溜梅已填好发行价、每手股数、完整招股书档位和默认策略。
+            SENASIC 已填好发行价、每手股数、完整招股书档位和默认策略。
           </div>
         </div>
         <div className="template-stock-grid">
@@ -771,10 +847,10 @@ export default function IpoTemplate() {
           })}
         </div>
         <div className="template-rule mt-4">
-          <div>溜溜梅：发行价 43.58 港元，每手 100 股，一手入场费 4,401.96 港元。</div>
-          <div>甲尾账户：账户资金大于等于 440,195.04 港元且不足 660,292.57 港元，目标 100,000 股，10 倍融资，融资费 88。</div>
-          <div>乙头账户：账户资金大于等于 660,292.57 港元，目标 150,000 股，10 倍融资，融资费 88。</div>
-          <div>其他账户：全部现金申购，不收手续费，按账户现金自动落到招股书合法档位。</div>
+          <div>SENASIC：发行价 18.36 港元，每手 200 股，一手入场费 3,709.04 港元。</div>
+          <div>4号、7号账户已退：不参与本轮申购。</div>
+          <div>10万以上本金：全部融资打，按10倍购买力取不超过购买力的招股书最高档位，融资费 88。</div>
+          <div>10万以下本金：28套餐，按10手 / 2,000股 / 37,090.32港元档执行，手续费 28。</div>
         </div>
         <div className="template-strategy-runner">
           <label className="template-field">
@@ -824,7 +900,7 @@ export default function IpoTemplate() {
         <div className="flex flex-wrap justify-between gap-2 mb-3">
           <h2 className="font-semibold">资金分界与手续费标准</h2>
           <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-              账户资金大于等于44.02万自动按10倍融资并收88融资费；其他账户强制现金且手续费为0。
+              4号/7号不打；10万以上10倍融资并收88融资费；10万以下按28套餐。
           </div>
         </div>
         <div className="overflow-x-auto rounded border" style={{ borderColor: 'var(--border)' }}>
@@ -893,7 +969,7 @@ export default function IpoTemplate() {
         <div className="flex flex-wrap justify-between gap-2 mb-3">
           <h2 className="font-semibold">逐账户拆分表</h2>
           <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-            每个账户可调手数；自动值已按“44.02万以上融资，其他现金”生成。
+            每个账户可调手数；自动值已按“SENASIC 10万分界 + 28套餐 + 4/7不打”生成。
           </div>
         </div>
         <div className="overflow-x-auto rounded border" style={{ borderColor: 'var(--border)' }}>
