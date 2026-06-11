@@ -402,10 +402,11 @@ function accountDefaultFee(accountTag, row, stock) {
 
 function accountFeeOptions(accountTag, row, stock) {
   const overrideFee = senasicAccountFeeOverride(row, stock)
-  if (overrideFee !== null) return [overrideFee]
-  if (accountTag === '现金' || accountTag === '不打') return [0]
-  if (accountTag === '28套餐') return [28]
-  return feeOptions
+  const options = accountTag === '现金' || accountTag === '不打'
+    ? [0, 28, 50, 68, 88, 100]
+    : feeOptions
+  if (overrideFee === null || options.includes(overrideFee)) return options
+  return [overrideFee, ...options]
 }
 
 function makeManualKey(row, stock) {
