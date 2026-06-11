@@ -380,6 +380,22 @@ function accountLeverage(row, tier, stock) {
   return tag === '现金' ? 1 : 10
 }
 
+function shouldSkipAccount(row, stock) {
+  return stock?.rule === 'senasic_6675' && [4, 7].includes(Number(row?.index || 0))
+}
+
+function accountDefaultFee(accountTag) {
+  if (accountTag === '现金' || accountTag === '不打') return 0
+  if (accountTag === '28套餐') return 28
+  return 88
+}
+
+function accountFeeOptions(accountTag) {
+  if (accountTag === '现金' || accountTag === '不打') return [0]
+  if (accountTag === '28套餐') return [28]
+  return feeOptions
+}
+
 function makeManualKey(row, stock) {
   return `${row.accountKey}-${stock.id}`
 }
@@ -579,13 +595,13 @@ export default function IpoTemplate() {
   }
 
   const rows = useMemo(() => {
-    return parseAccounts(accountsText).map(row => {
+    const primaryStock = stocks[0]
+    return parseAccounts(accountsText).filter(row => !shouldSkipAccount(row, primaryStock)).map(row => {
       const accountKey = `${row.code}-${row.name}-${row.index}`
       const tier = matchTier(row.capital, tiers)
-      const primaryStock = stocks[0]
       const leverage = accountLeverage(row, tier, primaryStock)
       const accountTag = accountIpoTag(row, primaryStock)
-      const tierFee = accountTag === '现金' ? 0 : 88
+      const tierFee = accountDefaultFee(accountTag)
       const subscriptionFee = manualFees[accountKey] ?? tierFee
       const buyingPower = row.capital * leverage
       let remainingCash = row.capital
@@ -1008,7 +1024,7 @@ export default function IpoTemplate() {
 	                  <td className="px-2 py-1.5">
 	                    <div className="template-fee-control">
 	                      <select value={row.subscriptionFee} onChange={e => setManualRowFee(row, e.target.value)}>
-	                        {(row.accountTag === '现金' ? [0] : feeOptions).map(fee => <option key={fee} value={fee}>{fee}</option>)}
+	                        {accountFeeOptions(row.accountTag).map(fee => <option key={fee} value={fee}>{fee}</option>)}
 	                      </select>
                       <button type="button" onClick={() => resetManualRowFee(row)}>自动</button>
                     </div>
