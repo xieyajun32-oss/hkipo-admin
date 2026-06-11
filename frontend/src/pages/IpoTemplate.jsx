@@ -384,13 +384,25 @@ function shouldSkipAccount(row, stock) {
   return stock?.rule === 'senasic_6675' && [4, 7].includes(Number(row?.index || 0))
 }
 
-function accountDefaultFee(accountTag) {
+function senasicAccountFeeOverride(row, stock) {
+  if (stock?.rule !== 'senasic_6675') return null
+  const index = Number(row?.index || 0)
+  if (index === 18) return 50
+  if ((index >= 34 && index <= 38) || [49, 50, 52, 53, 67].includes(index)) return 0
+  return null
+}
+
+function accountDefaultFee(accountTag, row, stock) {
+  const overrideFee = senasicAccountFeeOverride(row, stock)
+  if (overrideFee !== null) return overrideFee
   if (accountTag === '现金' || accountTag === '不打') return 0
   if (accountTag === '28套餐') return 28
   return 88
 }
 
-function accountFeeOptions(accountTag) {
+function accountFeeOptions(accountTag, row, stock) {
+  const overrideFee = senasicAccountFeeOverride(row, stock)
+  if (overrideFee !== null) return [overrideFee]
   if (accountTag === '现金' || accountTag === '不打') return [0]
   if (accountTag === '28套餐') return [28]
   return feeOptions
@@ -460,13 +472,13 @@ function planByRule(stock, remainingCash, accountFee, leverage = 1, reserveCash 
       targetAmount = fee28Tier?.amount || fee28Lots * lotCost
       maxLots = fee28Lots
       autoLots = fee28Lots
-      subscriptionFee = 28
+      subscriptionFee = accountFee
       ruleNote = '10万以下本金：28套餐，按10手/2,000股/37,090.32港元档执行'
     } else {
       targetAmount = remainingPower
       maxLots = affordableLots
       autoLots = matchAffordableLotCount(remainingPower, stock, affordableLots)
-      subscriptionFee = 88
+      subscriptionFee = accountFee
       ruleNote = '10万以上本金：全部融资打，按10倍购买力取不超过购买力的招股书最高档位'
     }
   } else if (stock.rule === 'tianchen_full') {
@@ -601,7 +613,7 @@ export default function IpoTemplate() {
       const tier = matchTier(row.capital, tiers)
       const leverage = accountLeverage(row, tier, primaryStock)
       const accountTag = accountIpoTag(row, primaryStock)
-      const tierFee = accountDefaultFee(accountTag)
+      const tierFee = accountDefaultFee(accountTag, row, primaryStock)
       const subscriptionFee = manualFees[accountKey] ?? tierFee
       const buyingPower = row.capital * leverage
       let remainingCash = row.capital
@@ -1024,7 +1036,7 @@ export default function IpoTemplate() {
 	                  <td className="px-2 py-1.5">
 	                    <div className="template-fee-control">
 	                      <select value={row.subscriptionFee} onChange={e => setManualRowFee(row, e.target.value)}>
-	                        {accountFeeOptions(row.accountTag).map(fee => <option key={fee} value={fee}>{fee}</option>)}
+	                        {accountFeeOptions(row.accountTag, row, stocks[0]).map(fee => <option key={fee} value={fee}>{fee}</option>)}
 	                      </select>
                       <button type="button" onClick={() => resetManualRowFee(row)}>自动</button>
                     </div>
