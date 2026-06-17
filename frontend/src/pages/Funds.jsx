@@ -3,7 +3,7 @@ import { api } from '../api/client'
 import DataTable from '../components/DataTable'
 
 const INFO_MARKER = '信息总表数据:'
-const brokerFundColumns = ['辉立', '华盛', '长桥', '盈立']
+const brokerFundColumns = ['辉立', '华盛', '长桥', '盈立', '致富']
 const bankFundColumns = ['汇丰', '中银', '众安', '汇立', '天星', '蚂蚁']
 const fundAliases = {
   汇立: ['汇立390'],
