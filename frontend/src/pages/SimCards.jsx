@@ -51,6 +51,15 @@ function sumSheetAmounts(rows, key, fallbackKey, ...aliases) {
   return amounts.reduce((sum, value) => sum + value, 0)
 }
 
+function sumComputedAmounts(rows, getter) {
+  const amounts = rows
+    .map(row => getter(row))
+    .filter(value => value != null)
+
+  if (amounts.length === 0) return null
+  return amounts.reduce((sum, value) => sum + value, 0)
+}
+
 function getCurrentBalance(row) {
   const packageFee = parseAmount(sheetValue(row, '当前套餐', 'monthly_cost'))
   const balance0511 = parseAmount(sheetValue(row, '5月11余额', null, '5.11余额'))
@@ -60,16 +69,24 @@ function getCurrentBalance(row) {
   return balance0511 + (rechargeMay || 0) - (packageFee || 0)
 }
 
+function getJuneBalance(row) {
+  const packageFee = parseAmount(sheetValue(row, '当前套餐', 'monthly_cost'))
+  const mayBalance = getCurrentBalance(row)
+
+  if (mayBalance == null) return null
+  return mayBalance - (packageFee || 0)
+}
+
 function getNextMonthBalance(row) {
   const packageFee = parseAmount(sheetValue(row, '当前套餐', 'monthly_cost'))
-  const currentBalance = getCurrentBalance(row)
+  const juneBalance = getJuneBalance(row)
 
-  if (currentBalance == null) return null
-  return currentBalance - (packageFee || 0)
+  if (juneBalance == null) return null
+  return juneBalance - (packageFee || 0)
 }
 
 function getArrearsStatus(row) {
-  const balance = getCurrentBalance(row)
+  const balance = getJuneBalance(row)
   const nextMonthBalance = getNextMonthBalance(row)
 
   if (balance == null) return { text: '余额未知', color: 'var(--text-muted)' }
@@ -100,6 +117,7 @@ const columns = [
   { key: 'payment_channel', label: '缴费渠道', render: (_, row) => sheetValue(row, '缴费渠道') },
   { key: 'call_once', label: '5月通话一次', render: (_, row) => sheetValue(row, '通话一次', null, '通话1次') },
   { key: 'current_balance', label: '5月余额', render: (_, row) => formatAmount(getCurrentBalance(row)) },
+  { key: 'june_balance', label: '6月余额', render: (_, row) => formatAmount(getJuneBalance(row)) },
   { key: 'next_month_balance', label: '预计下月余额', render: (_, row) => formatAmount(getNextMonthBalance(row)) },
   { key: 'arrears_notice', label: '欠费提醒', render: (_, row) => {
     const status = getArrearsStatus(row)
@@ -113,6 +131,9 @@ function getSummaryRow(rows) {
     monthly_cost: formatTotalAmount(sumSheetAmounts(rows, '当前套餐', 'monthly_cost')),
     recharge_3m: formatTotalAmount(sumSheetAmounts(rows, '3月充值')),
     recharge_5m: formatTotalAmount(sumSheetAmounts(rows, '5月充值')),
+    current_balance: formatTotalAmount(sumComputedAmounts(rows, getCurrentBalance)),
+    june_balance: formatTotalAmount(sumComputedAmounts(rows, getJuneBalance)),
+    next_month_balance: formatTotalAmount(sumComputedAmounts(rows, getNextMonthBalance)),
   }
 }
 
