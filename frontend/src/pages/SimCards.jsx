@@ -72,9 +72,10 @@ function getCurrentBalance(row) {
 function getJuneBalance(row) {
   const packageFee = parseAmount(sheetValue(row, '当前套餐', 'monthly_cost'))
   const mayBalance = getCurrentBalance(row)
+  const rechargeJune = parseAmount(sheetValue(row, '6月充值'))
 
   if (mayBalance == null) return null
-  return mayBalance - (packageFee || 0)
+  return mayBalance + (rechargeJune || 0) - (packageFee || 0)
 }
 
 function getNextMonthBalance(row) {
@@ -114,6 +115,7 @@ const columns = [
   { key: 'recharge_3m', label: '3月充值', render: (_, row) => sheetValue(row, '3月充值') },
   { key: 'balance_0511', label: '5月11余额', render: (_, row) => sheetValue(row, '5月11余额', null, '5.11余额') },
   { key: 'recharge_5m', label: '5月充值', render: (_, row) => sheetValue(row, '5月充值') },
+  { key: 'recharge_6m', label: '6月充值', render: (_, row) => sheetValue(row, '6月充值') },
   { key: 'payment_channel', label: '缴费渠道', render: (_, row) => sheetValue(row, '缴费渠道') },
   { key: 'call_once', label: '5月通话一次', render: (_, row) => sheetValue(row, '通话一次', null, '通话1次') },
   { key: 'current_balance', label: '5月余额', render: (_, row) => formatAmount(getCurrentBalance(row)) },
@@ -131,6 +133,7 @@ function getSummaryRow(rows) {
     monthly_cost: formatTotalAmount(sumSheetAmounts(rows, '当前套餐', 'monthly_cost')),
     recharge_3m: formatTotalAmount(sumSheetAmounts(rows, '3月充值')),
     recharge_5m: formatTotalAmount(sumSheetAmounts(rows, '5月充值')),
+    recharge_6m: formatTotalAmount(sumSheetAmounts(rows, '6月充值')),
     current_balance: formatTotalAmount(sumComputedAmounts(rows, getCurrentBalance)),
     june_balance: formatTotalAmount(sumComputedAmounts(rows, getJuneBalance)),
     next_month_balance: formatTotalAmount(sumComputedAmounts(rows, getNextMonthBalance)),
