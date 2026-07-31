@@ -13,7 +13,6 @@ import Ipos from './pages/Ipos'
 import IpoDetail from './pages/IpoDetail'
 import IpoTemplate from './pages/IpoTemplate'
 import HongKongBrief from './pages/HongKongBrief'
-import OneThingArticle from './pages/OneThingArticle'
 
 function PrivateRoute({ children }) {
   return isLoggedIn() ? children : <Navigate to="/login" />
@@ -23,7 +22,6 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
-      <Route path="/articles/one-thing" element={<OneThingArticle />} />
       <Route path="/admin" element={<PrivateRoute><Layout /></PrivateRoute>}>
         <Route index element={<Dashboard />} />
         <Route path="persons" element={<Persons />} />
